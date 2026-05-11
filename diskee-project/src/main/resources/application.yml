@@ -1,0 +1,56 @@
+server:
+  port: 8080
+  servlet.context-path: /api
+spring:
+  datasource:
+    url: jdbc:postgresql://${API_DB_HOST:diskee.db}:5432/diskee
+    username: shisha
+    password: ${API_DB_PASSWORD:default_pass}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    open-in-view: false
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    properties:
+      hibernate:
+        default_schema: ${API_DB_SCHEMA:diskee}
+        jdbc.lob.non_contextual_creation: true
+        order_by:
+          default_null_ordering: first
+  liquibase:
+    enabled: false
+    change-log: classpath:db/changelog/db.changelog.yaml
+    default-schema: ${API_DB_SCHEMA:diskee}
+  servlet:
+    multipart:
+      max-file-size: 4GB
+      max-request-size: 4GB
+  data:
+    rest:
+      detection-strategy: annotated
+      max-page-size: 2147483647
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          client-id: ${API_KEYCLOAK_CLIENT_ID:diskee-core}
+  forward-headers-strategy: NATIVE
+logging:
+  file:
+    name: ./logs/app.log
+  logback:
+    rollingpolicy:
+      file-name-pattern: ./logs/archived/app-%d{yyyy-MM-dd}.%i.log.gz
+      max-file-size: 10MB
+      total-size-cap: 300MB
+      max-history: 30
+    level:
+      org.springframework.web.filter.CommonsRequestLoggingFilter: ${API_LOG_LEVEL:DEBUG}
+jwt:
+  secret: ${API_JWT_SECRET:KAKSPFKSPOJAFDOPJFADSPOjsdafjdsf}
+app:
+  ui:
+    host: ${UI_HOST:http://localhost}
+springdoc:
+  swagger-ui:
+    operationsSorter: alpha
+    tagsSorter: alpha
