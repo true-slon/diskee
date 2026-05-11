@@ -12,11 +12,11 @@ services:
       - pgdata:/var/lib/postgresql/data
 
   app:
-    build: .
+    build: ../diskee-project/.
     ports:
       - "8080:8080"
     environment:
-      API_DB_HOST: diskee.db
+      API_DB_HOST: db
       API_DB_PASSWORD: ${DB_PASSWORD}
       API_DB_SCHEMA: diskee
     depends_on:

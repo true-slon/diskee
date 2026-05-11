@@ -17,7 +17,7 @@ spring:
         order_by:
           default_null_ordering: first
   liquibase:
-    enabled: true
+    enabled: false
     change-log: classpath:db/changelog/db.changelog.yaml
     default-schema: ${API_DB_SCHEMA:diskee}
   servlet:
