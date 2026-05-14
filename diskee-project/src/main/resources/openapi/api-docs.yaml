@@ -1,0 +1,1223 @@
+openapi: 3.0.3
+info:
+  title: Diskee Cloud Storage API
+  description: API for cloud storage service similar to Yandex.Disk
+  version: 1.0.0
+  contact:
+    name: Diskee Team
+    email: support@diskee.com
+  license:
+    name: Proprietary
+
+servers:
+  - url: http://localhost:8080/api
+    description: Local development server
+  - url: https://api.diskee.com/api
+    description: Production server
+
+tags:
+  - name: Authentication
+    description: User authentication and registration
+  - name: Files
+    description: File operations (upload, download, delete)
+  - name: Folders
+    description: Folder management
+  - name: Storage
+    description: Storage information and quota
+  - name: Search
+    description: Search files and folders
+  - name: Sharing
+    description: Share files and folders
+  - name: Trash
+    description: Trash bin management
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token obtained from /auth/login
+
+  schemas:
+    # Auth Schemas
+    LoginRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+          example: user@example.com
+        password:
+          type: string
+          format: password
+          minLength: 6
+          example: "securePassword123"
+    
+    RegisterRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+          example: user@example.com
+        password:
+          type: string
+          format: password
+          minLength: 6
+          example: "securePassword123"
+        displayName:
+          type: string
+          maxLength: 255
+          example: "John Doe"
+    
+    AuthResponse:
+      type: object
+      properties:
+        accessToken:
+          type: string
+          description: JWT access token (expires in 24 hours)
+          example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+        refreshToken:
+          type: string
+          description: Refresh token (expires in 7 days)
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        tokenType:
+          type: string
+          example: "Bearer"
+        expiresIn:
+          type: integer
+          example: 86400
+    
+    RefreshTokenRequest:
+      type: object
+      required:
+        - refreshToken
+      properties:
+        refreshToken:
+          type: string
+          example: "550e8400-e29b-41d4-a716-446655440000"
+    
+    UserResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+          example: 1
+        email:
+          type: string
+          example: "user@example.com"
+        displayName:
+          type: string
+          example: "John Doe"
+        storageUsedBytes:
+          type: integer
+          format: int64
+          example: 5120000000
+        storageLimitBytes:
+          type: integer
+          format: int64
+          example: 10737418240
+        createdAt:
+          type: string
+          format: date-time
+          example: "2024-01-01T00:00:00Z"
+
+    # File Schemas
+    FileResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+          example: 1
+        fileName:
+          type: string
+          example: "document.pdf"
+        fileExtension:
+          type: string
+          example: "pdf"
+        mimeType:
+          type: string
+          example: "application/pdf"
+        fileSizeBytes:
+          type: integer
+          format: int64
+          example: 1024000
+        parentFolderId:
+          type: integer
+          format: int64
+          nullable: true
+          example: 5
+        storageObjectKey:
+          type: string
+          example: "users/1/files/document.pdf"
+        previewObjectKey:
+          type: string
+          nullable: true
+          example: "users/1/previews/document.jpg"
+        isDeleted:
+          type: boolean
+          example: false
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    
+    UploadFileRequest:
+      type: object
+      properties:
+        file:
+          type: string
+          format: binary
+          description: File to upload
+        parentFolderId:
+          type: integer
+          format: int64
+          nullable: true
+          description: Parent folder ID (null for root)
+    
+    UploadResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: "File uploaded successfully"
+        file:
+          $ref: '#/components/schemas/FileResponse'
+    
+    # Folder Schemas
+    FolderRequest:
+      type: object
+      required:
+        - folderName
+      properties:
+        folderName:
+          type: string
+          minLength: 1
+          maxLength: 255
+          example: "Documents"
+        parentFolderId:
+          type: integer
+          format: int64
+          nullable: true
+          example: null
+    
+    FolderResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+          example: 1
+        folderName:
+          type: string
+          example: "Documents"
+        fullPath:
+          type: string
+          example: "/Documents"
+        parentFolderId:
+          type: integer
+          format: int64
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    
+    FolderContentsResponse:
+      type: object
+      properties:
+        folders:
+          type: array
+          items:
+            $ref: '#/components/schemas/FolderResponse'
+        files:
+          type: array
+          items:
+            $ref: '#/components/schemas/FileResponse'
+        totalFolders:
+          type: integer
+          example: 2
+        totalFiles:
+          type: integer
+          example: 5
+    
+    # Storage Schemas
+    StorageInfoResponse:
+      type: object
+      properties:
+        storageUsedBytes:
+          type: integer
+          format: int64
+          example: 5120000000
+        storageLimitBytes:
+          type: integer
+          format: int64
+          example: 10737418240
+        usagePercentage:
+          type: number
+          format: double
+          example: 47.68
+        storageUsedFormatted:
+          type: string
+          example: "5.12 GB"
+        storageLimitFormatted:
+          type: string
+          example: "10 GB"
+    
+    # Search Schemas
+    SearchRequest:
+      type: object
+      properties:
+        query:
+          type: string
+          minLength: 1
+          maxLength: 255
+          example: "document"
+        fileType:
+          type: string
+          enum: [all, document, image, video, audio, archive]
+          example: "document"
+        sortBy:
+          type: string
+          enum: [name, size, date]
+          default: "date"
+        sortOrder:
+          type: string
+          enum: [asc, desc]
+          default: "desc"
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 20
+        offset:
+          type: integer
+          minimum: 0
+          default: 0
+    
+    SearchResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            oneOf:
+              - $ref: '#/components/schemas/FileResponse'
+              - $ref: '#/components/schemas/FolderResponse'
+        total:
+          type: integer
+          example: 42
+        limit:
+          type: integer
+          example: 20
+        offset:
+          type: integer
+          example: 0
+    
+    # Share Schemas
+    ShareRequest:
+      type: object
+      required:
+        - token
+      properties:
+        fileId:
+          type: integer
+          format: int64
+          nullable: true
+        folderId:
+          type: integer
+          format: int64
+          nullable: true
+        token:
+          type: string
+          example: "abc123xyz"
+        permission:
+          type: string
+          enum: [view, download, edit]
+          default: "view"
+        password:
+          type: string
+          format: password
+          minLength: 4
+          maxLength: 255
+          description: Optional password protection
+        expiresAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: Expiration date (null for no expiration)
+    
+    ShareResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        token:
+          type: string
+          example: "abc123xyz"
+        shareUrl:
+          type: string
+          example: "https://disk.com/share/abc123xyz"
+        permission:
+          type: string
+          example: "view"
+        expiresAt:
+          type: string
+          format: date-time
+          nullable: true
+        downloadCount:
+          type: integer
+          example: 0
+        createdAt:
+          type: string
+          format: date-time
+    
+    # Trash Schemas
+    TrashItemResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        itemType:
+          type: string
+          enum: [file, folder]
+        name:
+          type: string
+          example: "old_document.pdf"
+        originalPath:
+          type: string
+          example: "/Documents/work/old_document.pdf"
+        size:
+          type: integer
+          format: int64
+          example: 1024000
+        deletedAt:
+          type: string
+          format: date-time
+        autoDeleteAt:
+          type: string
+          format: date-time
+          description: Will be permanently deleted after this date
+    
+    RestoreRequest:
+      type: object
+      properties:
+        restoreToOriginalPath:
+          type: boolean
+          default: true
+        newPath:
+          type: string
+          nullable: true
+          description: New path if restoreToOriginalPath is false
+    
+    # Error Schemas
+    ErrorResponse:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        status:
+          type: integer
+          example: 400
+        error:
+          type: string
+          example: "Bad Request"
+        message:
+          type: string
+          example: "Validation failed"
+        path:
+          type: string
+          example: "/api/files/upload"
+        details:
+          type: array
+          items:
+            type: string
+          example: ["File size exceeds limit", "Invalid file type"]
+
+security:
+  - bearerAuth: []
+
+paths:
+  # ==================== AUTHENTICATION ====================
+  /auth/register:
+    post:
+      tags:
+        - Authentication
+      summary: Register new user
+      operationId: registerUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: User registered successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          description: Invalid input or email already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  
+  /auth/login:
+    post:
+      tags:
+        - Authentication
+      summary: Login user
+      operationId: loginUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  
+  /auth/refresh:
+    post:
+      tags:
+        - Authentication
+      summary: Refresh access token
+      operationId: refreshToken
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshTokenRequest'
+      responses:
+        '200':
+          description: Token refreshed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          description: Invalid or expired refresh token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  
+  /auth/logout:
+    post:
+      tags:
+        - Authentication
+      summary: Logout user
+      operationId: logoutUser
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Logout successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Logged out successfully"
+  
+  /auth/me:
+    get:
+      tags:
+        - Authentication
+      summary: Get current user info
+      operationId: getCurrentUser
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: User info retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # ==================== FILES ====================
+  /files/upload:
+    post:
+      tags:
+        - Files
+      summary: Upload file
+      operationId: uploadFile
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                parentFolderId:
+                  type: integer
+                  format: int64
+                  nullable: true
+      responses:
+        '200':
+          description: File uploaded successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UploadResponse'
+        '400':
+          description: Invalid request (file too large, invalid type, etc.)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '413':
+          description: File too large
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  
+  /files/root:
+    get:
+      tags:
+        - Files
+      summary: Get files from root directory
+      operationId: getRootFiles
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: includeFolders
+          in: query
+          schema:
+            type: boolean
+            default: true
+          description: Include folders in response
+      responses:
+        '200':
+          description: Files retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FolderContentsResponse'
+  
+  /files/{fileName}:
+    get:
+      tags:
+        - Files
+      summary: Download file
+      operationId: downloadFile
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: fileName
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Name of the file to download
+      responses:
+        '200':
+          description: File downloaded successfully
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        '404':
+          description: File not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    
+    delete:
+      tags:
+        - Files
+      summary: Delete file (move to trash)
+      operationId: deleteFile
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: fileName
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: File deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "File moved to trash"
+        '404':
+          description: File not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  
+  /files/{fileName}/preview:
+    get:
+      tags:
+        - Files
+      summary: Get file preview (for images and documents)
+      operationId: getFilePreview
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: fileName
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: width
+          in: query
+          schema:
+            type: integer
+            minimum: 100
+            maximum: 2000
+          description: Preview width in pixels
+        - name: height
+          in: query
+          schema:
+            type: integer
+            minimum: 100
+            maximum: 2000
+          description: Preview height in pixels
+      responses:
+        '200':
+          description: Preview generated
+          content:
+            image/jpeg:
+              schema:
+                type: string
+                format: binary
+        '404':
+          description: File or preview not available
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # ==================== FOLDERS ====================
+  /folders:
+    post:
+      tags:
+        - Folders
+      summary: Create folder
+      operationId: createFolder
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FolderRequest'
+      responses:
+        '201':
+          description: Folder created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FolderResponse'
+        '400':
+          description: Invalid folder name or path
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  
+  /folders/{folderId}:
+    get:
+      tags:
+        - Folders
+      summary: Get folder contents
+      operationId: getFolderContents
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: folderId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Folder contents retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FolderContentsResponse'
+        '404':
+          description: Folder not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    
+    put:
+      tags:
+        - Folders
+      summary: Rename folder
+      operationId: renameFolder
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: folderId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                newName:
+                  type: string
+                  minLength: 1
+                  maxLength: 255
+      responses:
+        '200':
+          description: Folder renamed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FolderResponse'
+        '404':
+          description: Folder not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    
+    delete:
+      tags:
+        - Folders
+      summary: Delete folder (move to trash)
+      operationId: deleteFolder
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: folderId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+        - name: recursive
+          in: query
+          schema:
+            type: boolean
+            default: false
+          description: Delete folder contents recursively
+      responses:
+        '200':
+          description: Folder moved to trash
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Folder moved to trash"
+
+  # ==================== STORAGE ====================
+  /user/storage:
+    get:
+      tags:
+        - Storage
+      summary: Get user storage info
+      operationId: getStorageInfo
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Storage info retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StorageInfoResponse'
+
+  # ==================== SEARCH ====================
+  /search:
+    get:
+      tags:
+        - Search
+      summary: Search files and folders
+      operationId: search
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Search query
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum: [all, file, folder]
+          description: Filter by type
+        - name: fileType
+          in: query
+          schema:
+            type: string
+            enum: [all, document, image, video, audio, archive]
+          description: Filter by file type (for files only)
+        - name: sortBy
+          in: query
+          schema:
+            type: string
+            enum: [name, size, date]
+            default: date
+        - name: sortOrder
+          in: query
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: desc
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        '200':
+          description: Search results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SearchResponse'
+        '400':
+          description: Invalid search query
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # ==================== SHARING ====================
+  /shares:
+    post:
+      tags:
+        - Sharing
+      summary: Create share link
+      operationId: createShareLink
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ShareRequest'
+      responses:
+        '201':
+          description: Share link created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShareResponse'
+        '400':
+          description: Invalid request (missing fileId or folderId)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  
+  /shares/{token}:
+    get:
+      tags:
+        - Sharing
+      summary: Get shared item (public access)
+      operationId: getSharedItem
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: password
+          in: query
+          schema:
+            type: string
+          description: Password for protected shares
+      responses:
+        '200':
+          description: Shared item retrieved
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/FileResponse'
+                  - $ref: '#/components/schemas/FolderContentsResponse'
+        '401':
+          description: Password required or incorrect
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Share link not found or expired
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    
+    delete:
+      tags:
+        - Sharing
+      summary: Delete share link
+      operationId: deleteShareLink
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Share link deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Share link deleted"
+
+  /shares/{token}/download:
+    get:
+      tags:
+        - Sharing
+      summary: Download shared file
+      operationId: downloadSharedFile
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: password
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: File downloaded
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        '403':
+          description: Access denied (wrong password or insufficient permissions)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Share link not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # ==================== TRASH ====================
+  /trash:
+    get:
+      tags:
+        - Trash
+      summary: Get trash bin contents
+      operationId: getTrashContents
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 50
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        '200':
+          description: Trash contents retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/TrashItemResponse'
+                  total:
+                    type: integer
+                  limit:
+                    type: integer
+                  offset:
+                    type: integer
+  
+  /trash/restore/{itemId}:
+    post:
+      tags:
+        - Trash
+      summary: Restore item from trash
+      operationId: restoreFromTrash
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: itemId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RestoreRequest'
+      responses:
+        '200':
+          description: Item restored
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Item restored successfully"
+        '404':
+          description: Item not found in trash
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  
+  /trash/permanent/{itemId}:
+    delete:
+      tags:
+        - Trash
+      summary: Permanently delete item
+      operationId: permanentDelete
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: itemId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Item permanently deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Item permanently deleted"
+        '404':
+          description: Item not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  
+  /trash/clear:
+    delete:
+      tags:
+        - Trash
+      summary: Clear entire trash bin
+      operationId: clearTrash
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Trash bin cleared
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Trash bin cleared"
