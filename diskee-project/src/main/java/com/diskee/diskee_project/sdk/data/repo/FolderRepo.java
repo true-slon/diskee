@@ -6,5 +6,5 @@ import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 
 import java.util.UUID;
 
-public interface FolderRepo extends JpaRepository<FolderEntity, UUID>, JpaSpecificationExecutor<FolderEntity> {
+public interface FolderRepo extends JpaRepository<FolderEntity, Long>, JpaSpecificationExecutor<FolderEntity> {
 }

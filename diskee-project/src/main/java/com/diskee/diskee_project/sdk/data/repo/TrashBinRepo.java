@@ -7,5 +7,5 @@ import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 
 import java.util.UUID;
 
-public interface TrashBinRepo extends JpaRepository<TrashBinEntity, UUID>, JpaSpecificationExecutor<TrashBinEntity> {
+public interface TrashBinRepo extends JpaRepository<TrashBinEntity, Long>, JpaSpecificationExecutor<TrashBinEntity> {
 }

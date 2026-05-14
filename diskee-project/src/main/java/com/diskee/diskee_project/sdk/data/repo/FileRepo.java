@@ -7,5 +7,5 @@ import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 
 import java.util.UUID;
 
-public interface FileRepo extends JpaRepository<FileEntity, UUID>, JpaSpecificationExecutor<FileEntity> {
+public interface FileRepo extends JpaRepository<FileEntity, Long>, JpaSpecificationExecutor<FileEntity> {
 }
