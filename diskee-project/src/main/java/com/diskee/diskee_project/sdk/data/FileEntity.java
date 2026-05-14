@@ -1,12 +1,23 @@
 package com.diskee.diskee_project.sdk.data;
 
+import java.time.Instant;
+
 import com.diskee.diskee_project.utils.BaseEntity;
 import com.diskee.diskee_project.utils.FlagDeletable;
-import jakarta.persistence.*;
-import lombok.*;
-import org.hibernate.mapping.SoftDeletable;
 
-import java.time.Instant;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.PreUpdate;
+import jakarta.persistence.Table;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 @Entity
 @Table(name = "files")
@@ -17,9 +28,6 @@ import java.time.Instant;
 @Builder
 public class FileEntity extends BaseEntity implements FlagDeletable {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
