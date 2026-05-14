@@ -3,6 +3,7 @@ package com.diskee.diskee_project.sdk.service;
 import com.diskee.diskee_project.api.request.UploadedFile;
 import com.diskee.diskee_project.sdk.data.FileEntity;
 import com.diskee.diskee_project.sdk.data.repo.FileRepo;
+import com.diskee.diskee_project.sdk.data.spec.FileSpecification;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;

@@ -1,38 +1,20 @@
 package com.diskee.diskee_project.sdk.service;
 
 import com.diskee.diskee_project.config.S3Properties;
-import com.diskee.diskee_project.sdk.data.repo.FileRepo;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.Resource;
-import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.File;
-import java.util.Collection;
-import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 
-import static java.util.Objects.isNull;
-
 import com.diskee.diskee_project.api.request.UploadedFile;
-import lombok.RequiredArgsConstructor;
-import lombok.SneakyThrows;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.ByteArrayResource;
-import org.springframework.core.io.Resource;
-import org.springframework.stereotype.Service;
-import org.springframework.web.multipart.MultipartFile;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.*;
-
-import java.io.IOException;
-import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
