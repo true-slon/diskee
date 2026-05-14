@@ -1,6 +1,8 @@
 package com.diskee.diskee_project.config;
 
 
+import io.minio.MinioClient;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -15,30 +17,20 @@ import java.net.URI;
 @Configuration
 public class S3Config {
 
-    @Bean
-    @ConfigurationProperties(prefix = "storage.s3")
-    public S3Properties s3Properties() {
-        return new S3Properties();
-    }
+    @Value("${s3.endpoint}")
+    private String endpoint;
+
+    @Value("${s3.access-key}")
+    private String accessKey;
+
+    @Value("${s3.secret-key}")
+    private String secretKey;
 
     @Bean
-    public S3Client s3Client(S3Properties props) {
-        var builder = S3Client.builder()
-                .region(Region.of(props.getRegion()))
-                .credentialsProvider(StaticCredentialsProvider.create(
-                        AwsBasicCredentials.create(props.getAccessKey(), props.getSecretKey())
-                ));
-
-        if (props.getEndpoint() != null && !props.getEndpoint().isEmpty()) {
-            builder.endpointOverride(URI.create(props.getEndpoint()));
-        }
-
-        if (props.isPathStyleAccess()) {
-            builder.serviceConfiguration(S3Configuration.builder()
-                    .pathStyleAccessEnabled(true)
-                    .build());
-        }
-
-        return builder.build();
+    public MinioClient minioClient() {
+        return MinioClient.builder()
+                .endpoint(endpoint)
+                .credentials(accessKey, secretKey)
+                .build();
     }
 }

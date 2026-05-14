@@ -30,7 +30,7 @@ import static java.util.Objects.isNull;
 public class FileService {
 
     private final FileRepo fileRepository;
-    private final DiskService diskService;
+    private final S3Service diskService;
     private final CurrentUserService currentUserService;
 
     @Transactional(readOnly = true)
