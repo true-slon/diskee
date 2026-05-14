@@ -1,9 +1,11 @@
 package com.diskee.diskee_project.sdk.service;
 
+import com.diskee.diskee_project.api.exception.FileNotFoundProblem;
 import com.diskee.diskee_project.api.request.UploadedFile;
 import com.diskee.diskee_project.sdk.data.FileEntity;
 import com.diskee.diskee_project.sdk.data.repo.FileRepo;
 import com.diskee.diskee_project.sdk.data.spec.FileSpecification;
+import com.diskee.diskee_project.utils.EntityUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
@@ -28,7 +30,6 @@ import static java.util.Objects.isNull;
 @RequiredArgsConstructor
 @Slf4j
 public class FileService {
-
     private final FileRepo fileRepository;
     private final S3Service diskService;
     private final CurrentUserService currentUserService;

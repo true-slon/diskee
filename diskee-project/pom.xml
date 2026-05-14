@@ -114,6 +114,11 @@
 			<artifactId>jackson-databind-nullable</artifactId>
 			<version>0.2.6</version> <!-- Check for latest version -->
 		</dependency>
+		<dependency>
+			<groupId>org.zalando</groupId>
+			<artifactId>problem-spring-web</artifactId>
+			<version>0.29.1</version>
+		</dependency>
 	</dependencies>
 
 	<build>

@@ -1,6 +1,7 @@
 package com.diskee.diskee_project.sdk.data;
 
 import com.diskee.diskee_project.utils.BaseEntity;
+import com.diskee.diskee_project.utils.FlagDeletable;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.mapping.SoftDeletable;
@@ -14,7 +15,7 @@ import java.time.Instant;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class FileEntity extends BaseEntity implements SoftDeletable {   // "File" conflicts with java.io.File
+public class FileEntity extends BaseEntity implements FlagDeletable {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

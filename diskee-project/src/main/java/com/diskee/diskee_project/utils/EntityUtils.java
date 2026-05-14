@@ -14,41 +14,43 @@ import java.util.stream.Collectors;
 
 public class EntityUtils {
     @SneakyThrows
-    public static <E extends BaseEntity implements SoftDeletable> void checkInconsistency(
-            @NonNull UUID id,
+    public static <E extends BaseEntity & FlagDeletable> void checkInconsistency(
+            @NonNull Long id,
             @Nullable E entity,
-            @NonNull Function<UUID, Exception> exceptionFactory,
+            @NonNull Function<Long, Exception> exceptionFactory,
             @NonNull boolean deleted
     ) {
         Objects.requireNonNull(id);
         Objects.requireNonNull(exceptionFactory);
 
         if ((entity != null)
-                && (Objects.equals(entity.getId(), id))
-                && (Objects.isNull(entity.getDeletedAt()) || deleted)) {
-            return;
+                && (Objects.equals(entity.getId(), id))) {
+            entity.isDeleted();
+            if (deleted) {
+                return;
+            }
         }
 
         throw exceptionFactory.apply(id);
     }
 
     @SneakyThrows
-    public static <E extends SoftDeletable> void checkInconsistency(
-            @NonNull Collection<UUID> ids,
+    public static <E extends  BaseEntity & FlagDeletable> void checkInconsistency(
+            @NonNull Collection<Long> ids,
             @NonNull Collection<E> entities,
-            @NonNull Function<UUID, Exception> exceptionFactory,
+            @NonNull Function<Long, Exception> exceptionFactory,
             @NonNull boolean deleted
     ) {
         Objects.requireNonNull(ids);
         Objects.requireNonNull(entities);
         Objects.requireNonNull(exceptionFactory);
 
-        Set<UUID> idsSet = ids.stream()
+        Set<Long> idsSet = ids.stream()
                 .filter(Objects::nonNull)
                 .collect(Collectors.toSet());
-        Set<UUID> entityIdsSet = entities.stream()
+        Set<Long> entityIdsSet = entities.stream()
                 .filter(Objects::nonNull)
-                .filter(e -> Objects.isNull(e.getDeletedAt()) || deleted)
+                .filter(ent -> ent.isDeleted() || deleted)
                 .map(BaseEntity::getId)
                 .filter(Objects::nonNull)
                 .collect(Collectors.toSet());
