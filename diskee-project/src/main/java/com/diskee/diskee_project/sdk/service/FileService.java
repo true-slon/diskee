@@ -85,9 +85,13 @@ public class FileService {
         FileEntity file = fileRepository.findById(fileId).orElse(null);
         if (file == null) return;
 
+        boolean deletedFromStorage = diskService.deleteByKey(file.getStorageObjectKey());
+        if (!deletedFromStorage) {
+            throw new RuntimeException("Failed to delete file from storage: " + file.getStorageObjectKey());
+        }
+
         file.setDeleted(true);
         fileRepository.save(file);
-        diskService.deleteByKey(file.getStorageObjectKey());
     }
 
     @Transactional

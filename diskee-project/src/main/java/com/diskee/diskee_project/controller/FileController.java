@@ -1,62 +1,42 @@
 package com.diskee.diskee_project.controller;
 
-import java.io.InputStream;
-
-import org.springframework.core.io.InputStreamResource;
+import com.diskee.diskee_project.sdk.data.FileEntity;
+import com.diskee.diskee_project.sdk.service.FileService;
+import lombok.RequiredArgsConstructor;
+import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-
-import com.diskee.diskee_project.sdk.service.S3Service;
 
 @RestController
 @RequestMapping("/api/files")
+@RequiredArgsConstructor
 public class FileController {
 
-    private final S3Service s3Service;
+    private final FileService fileService;
 
-    public FileController(S3Service s3Service) {
-        this.s3Service = s3Service;
+    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<FileEntity> upload(@RequestParam("file") MultipartFile file) {
+        FileEntity saved = fileService.create(file);
+        return ResponseEntity.ok(saved);
     }
 
-   @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<String> upload(@RequestParam("file") MultipartFile file) {
-    try {
-        s3Service.uploadFile(file.getOriginalFilename(), file);
-        return ResponseEntity.ok("Файл загружен: " + file.getOriginalFilename());
-    } catch (Exception e) {
-        return ResponseEntity.status(500).body("Ошибка: " + e.getMessage());
-    }
-}
-
-    @GetMapping("/download/{fileName}")
-    public ResponseEntity<InputStreamResource> download(@PathVariable String fileName) {
-        try {
-            InputStream stream = s3Service.downloadFile(fileName);
-            return ResponseEntity.ok()
-                    .contentType(MediaType.APPLICATION_OCTET_STREAM)
-                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + fileName + "\"")
-                    .body(new InputStreamResource(stream));
-        } catch (Exception e) {
-            return ResponseEntity.notFound().build();
-        }
+    @GetMapping("/{fileId}")
+    public ResponseEntity<Resource> download(@PathVariable Long fileId) {
+        FileEntity fileEntity = fileService.findById(fileId);
+        Resource resource = fileService.getFileByKey(fileEntity.getStorageObjectKey());
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(fileEntity.getMimeType()))
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=\"" + fileEntity.getFileName() + "\"")
+                .body(resource);
     }
 
-    @DeleteMapping("/{fileName}")
-    public ResponseEntity<String> delete(@PathVariable String fileName) {
-        try {
-            s3Service.deleteFile(fileName);
-            return ResponseEntity.ok("Файл удалён: " + fileName);
-        } catch (Exception e) {
-            return ResponseEntity.status(500).body("Ошибка: " + e.getMessage());
-        }
+    @DeleteMapping("/{fileId}")
+    public ResponseEntity<Void> delete(@PathVariable Long fileId) {
+        fileService.delete(fileId);
+        return ResponseEntity.noContent().build();
     }
 }
