@@ -1,4 +1,10 @@
 package com.diskee.diskee_project.sdk.data.repo;
 
-public interface LinkFilesFoldersRepo {
+import com.diskee.diskee_project.sdk.data.LinkFilesFoldersEntity;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+
+import java.util.UUID;
+
+public interface LinkFilesFoldersRepo extends JpaRepository<LinkFilesFoldersEntity, UUID>, JpaSpecificationExecutor<LinkFilesFoldersEntity> {
 }

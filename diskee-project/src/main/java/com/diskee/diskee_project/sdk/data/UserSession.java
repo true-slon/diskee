@@ -17,7 +17,7 @@ public class UserSession {
 
     @Id
     @Column(name = "session_id", nullable = false, updatable = false)
-    @GeneratedValue(strategy = GenerationType.AUTO) // or GenerationType.UUID if Hibernate 6+
+    @GeneratedValue(strategy = GenerationType.AUTO)
     private UUID sessionId;
 
     @ManyToOne(fetch = FetchType.LAZY)
