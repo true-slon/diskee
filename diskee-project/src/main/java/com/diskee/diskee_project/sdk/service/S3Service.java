@@ -28,18 +28,6 @@ public class S3Service {
         this.minioClient = minioClient;
     }
 
-    public void uploadFile(String objectName, MultipartFile file) throws Exception {
-        minioClient.putObject(
-            PutObjectArgs.builder()
-                .bucket(bucket)
-                .object(objectName)
-                .stream(file.getInputStream(), file.getSize(), -1)
-                .contentType(file.getContentType())
-                .build()
-        );
-    }
-
-
     @SneakyThrows
     public UploadedFile uploadFile(MultipartFile file) {
         String objectName = generateKey(file.getOriginalFilename());
@@ -65,23 +53,19 @@ public class S3Service {
                 .build();
     }
 
-    public InputStream downloadFile(String objectName) throws Exception {
-        return minioClient.getObject(
-            GetObjectArgs.builder()
-                .bucket(bucket)
-                .object(objectName)
-                .build()
+    @SneakyThrows
+    public Resource getFileFromKey(String key) {
+        InputStream is = minioClient.getObject(
+                GetObjectArgs.builder()
+                        .bucket(bucket)
+                        .object(key)
+                        .build()
         );
+        byte[] content = is.readAllBytes();
+        is.close();
+        return new ByteArrayResource(content);
     }
 
-    public void deleteFile(String objectName) throws Exception {
-        minioClient.removeObject(
-            RemoveObjectArgs.builder()
-                .bucket(bucket)
-                .object(objectName)
-                .build()
-        );
-    }
     @SneakyThrows
     public boolean deleteByKey(String key) {
         try {
@@ -97,18 +81,6 @@ public class S3Service {
             log.error("Failed to delete file from MinIO: key={}", key, e);
             return false;
         }
-    }
-    @SneakyThrows
-    public Resource getFileFromKey(String key) {
-        InputStream is = minioClient.getObject(
-                GetObjectArgs.builder()
-                        .bucket(bucket)
-                        .object(key)
-                        .build()
-        );
-        byte[] content = is.readAllBytes();
-        is.close();
-        return new ByteArrayResource(content);
     }
 
     private String generateKey(String originalFilename) {
