@@ -16,15 +16,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Collection;
 import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
-
-import static java.util.Objects.isNull;
 
 @Service
 @RequiredArgsConstructor
@@ -102,27 +97,6 @@ public class FileService {
             diskService.deleteByKey(file.getStorageObjectKey());
         });
         fileRepository.saveAll(files);
-    }
-
-    @SneakyThrows
-    @Transactional
-    public FileEntity createInDb(String storageKey) {
-        Resource resource = diskService.getFileFromKey(storageKey);
-        String filename = extractFilenameFromKey(storageKey);
-
-        FileEntity fileEntity = FileEntity.builder()
-                .user(currentUserService.getUser())
-                .storageObjectKey(storageKey)
-                .fileName(filename)
-                .fileExtension(getExtension(filename))
-                .fileSizeBytes(resource.contentLength())
-                .mimeType(detectMimeType(resource))
-                .isDeleted(false)
-                .build();
-
-        fileRepository.saveAndFlush(fileEntity);
-        log.info("File entity stored from S3: {}", fileEntity.getFileName());
-        return fileEntity;
     }
 
     @SneakyThrows
