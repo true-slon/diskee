@@ -1,17 +1,17 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import FileUploader from '../components/FileUploader';
 import FileList from '../components/FileList';
 import StorageInfo from '../components/StorageInfo';
 import Breadcrumbs from '../components/Breadcrumbs';
 import SharedLinks from '../components/SharedLinks';
+import TrashBin from '../components/TrashBin';
 
 const Dashboard = () => {
   const { user, logout } = useAuth();
   const [currentFolderId, setCurrentFolderId] = useState(null);
   const [folderStack, setFolderStack] = useState([]);
-  const [activeSection, setActiveSection] = useState('files'); // 'files' | 'shared'
+  const [activeSection, setActiveSection] = useState('files');
 
   const handleFolderClick = (folderId) => {
     setFolderStack([...folderStack, currentFolderId]);
@@ -20,9 +20,7 @@ const Dashboard = () => {
 
   const handleNavigate = (folderId) => {
     setCurrentFolderId(folderId);
-    if (folderId === null) {
-      setFolderStack([]);
-    }
+    if (folderId === null) setFolderStack([]);
   };
 
   const handleBack = () => {
@@ -33,9 +31,13 @@ const Dashboard = () => {
     }
   };
 
-  const handleSectionChange = (section) => {
-    setActiveSection(section);
-  };
+  const navItems = [
+    { id: 'files',   label: '📁 Мои файлы' },
+    { id: 'recent',  label: '🕒 Недавние' },
+    { id: 'starred', label: '⭐ Избранное' },
+    { id: 'trash',   label: '🗑️ Корзина' },
+    { id: 'shared',  label: '🔗 Общие ссылки' },
+  ];
 
   return (
     <div className="dashboard">
@@ -56,28 +58,25 @@ const Dashboard = () => {
             <StorageInfo />
           </div>
           <nav className="sidebar-nav">
-            <button
-              className={`nav-item ${activeSection === 'files' ? 'active' : ''}`}
-              onClick={() => { handleSectionChange('files'); handleNavigate(null); }}
-            >
-              📁 Мои файлы
-            </button>
-            <button className="nav-item">🕒 Недавние</button>
-            <button className="nav-item">⭐ Избранное</button>
-            <Link to="/trash" className="nav-item">🗑️ Корзина</Link>
-            <button
-              className={`nav-item ${activeSection === 'shared' ? 'active' : ''}`}
-              onClick={() => handleSectionChange('shared')}
-            >
-              🔗 Общие ссылки
-            </button>
+            {navItems.map((item) => (
+              <button
+                key={item.id}
+                className={`nav-item ${activeSection === item.id ? 'active' : ''}`}
+                onClick={() => {
+                  setActiveSection(item.id);
+                  if (item.id === 'files') handleNavigate(null);
+                }}
+              >
+                {item.label}
+              </button>
+            ))}
           </nav>
         </aside>
 
         <main className="main-content">
-          {activeSection === 'shared' ? (
-            <SharedLinks />
-          ) : (
+          {activeSection === 'shared' && <SharedLinks />}
+          {activeSection === 'trash'  && <TrashBin />}
+          {activeSection === 'files'  && (
             <>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
                 {currentFolderId && (
@@ -94,6 +93,15 @@ const Dashboard = () => {
                 onFolderClick={handleFolderClick}
               />
             </>
+          )}
+          {(activeSection === 'recent' || activeSection === 'starred') && (
+            <div className="empty-state">
+              <div className="empty-state-icon">
+                {activeSection === 'recent' ? '🕒' : '⭐'}
+              </div>
+              <p>{activeSection === 'recent' ? 'Недавние файлы' : 'Избранное'}</p>
+              <span>Раздел пока в разработке</span>
+            </div>
           )}
         </main>
       </div>
