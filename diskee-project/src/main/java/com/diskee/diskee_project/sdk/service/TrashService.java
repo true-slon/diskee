@@ -33,12 +33,13 @@ public class TrashService {
     private final S3Service diskService;
     private final CurrentUserService currentUserService;
     private final CacheManager cacheManager;                     
+    private final CacheInvalidationService cacheInvalidationService;
 
     @Transactional
     public TrashBinEntity moveFileToTrash(Long fileId) {
         FileEntity file = fileRepo.findById(fileId)
                 .orElseThrow(() -> new RuntimeException("Файл не найден: " + fileId));
-
+        Long parentId = file.getParentFolder() != null ? file.getParentFolder().getId() : null;
         if (file.isDeleted()) {
             throw new RuntimeException("Файл уже в корзине");
         }
@@ -55,10 +56,12 @@ public class TrashService {
                 .build();
 
         TrashBinEntity saved = trashBinRepo.save(trash);
-
-        Objects.requireNonNull(cacheManager.getCache("file_metadata")).evict(fileId);
-        Objects.requireNonNull(cacheManager.getCache("file_folder_contents")).clear();
-
+        if (parentId == null) {
+            cacheInvalidationService.evictFolderContentsRoot();
+        } else {
+            cacheInvalidationService.evictFolderContents(parentId);
+        }
+        cacheInvalidationService.evictFileMetadata(fileId);
         log.info("Файл перемещён в корзину: {}", file.getFileName());
         return saved;
     }
@@ -91,7 +94,7 @@ public class TrashService {
 
         trashBinRepo.save(trash);
 
-        Objects.requireNonNull(cacheManager.getCache("file_folder_contents")).clear();
+        cacheInvalidationService.evictFolderContents(folderId);
 
         log.info("Папка перемещена в корзину: {}", folder.getFolderName());
     }
