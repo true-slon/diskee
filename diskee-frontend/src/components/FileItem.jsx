@@ -4,12 +4,14 @@ import { fileApi } from '../api/fileApi';
 import bytes from 'bytes';
 import { formatDistanceToNow } from 'date-fns';
 import { ru } from 'date-fns/locale';
+import { CreateSharedLinkDialog } from './CreateSharedLinkDialog';
 
 const FileItem = ({ file, viewMode, onFolderClick, onFileDeleted, onDeleteToTrash, onDragStart, onDragOver, onDrop, onDragEnd, isDragTarget }) => {
   const [contextMenu, setContextMenu] = useState(null);
   const [isRenaming, setIsRenaming] = useState(false);
   const [newName, setNewName] = useState('');
   const [isDragOver, setIsDragOver] = useState(false);
+  const [showShareDialog, setShowShareDialog] = useState(false);
   const queryClient = useQueryClient();
 
   if (!file) return null;
@@ -83,6 +85,11 @@ const FileItem = ({ file, viewMode, onFolderClick, onFileDeleted, onDeleteToTras
     renameMutation.mutate(newName.trim() + ext);
   };
 
+  const handleShare = () => {
+    handleCloseMenu();
+    setShowShareDialog(true);
+  };
+
   if (isRenaming) {
     return (
       <div className={`file-item-${viewMode}`}>
@@ -148,10 +155,19 @@ const FileItem = ({ file, viewMode, onFolderClick, onFileDeleted, onDeleteToTras
             background: 'white', border: '1px solid #ccc', borderRadius: 4,
             padding: 8, boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
           }}>
+            <div className="context-menu-item" onClick={handleShare}>🔗 Поделиться</div>
             <div className="context-menu-item" onClick={handleRenameStart}>✏️ Переименовать</div>
             <div className="context-menu-item" style={{ color: 'red' }} onClick={handleDelete}>🗑️ Удалить</div>
           </div>
         </>
+      )}
+
+      {showShareDialog && (
+        <CreateSharedLinkDialog
+          item={file}
+          open={showShareDialog}
+          onClose={() => setShowShareDialog(false)}
+        />
       )}
     </>
   );

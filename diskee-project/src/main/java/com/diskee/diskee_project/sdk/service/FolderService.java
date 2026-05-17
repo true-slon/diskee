@@ -178,9 +178,9 @@ public class FolderService {
 
     @Transactional
     @Cacheable(value = "folder_contents", key = "T(org.springframework.security.core.context.SecurityContextHolder).getContext().getAuthentication().getName() + '-' + (#parentId != null ? #parentId : 'root')")
-    public FolderDTOs.FolderContentsResponse getContents(Long id) {
-        List<FolderResponse> folders = getFolders(id);
-        List<FileDTOs.FileResponse> files = fileService.getFiles(id);
+    public FolderDTOs.FolderContentsResponse getContents(Long parentId) {
+        List<FolderResponse> folders = getFolders(parentId);
+        List<FileDTOs.FileResponse> files = fileService.getFiles(parentId);
 
         FolderDTOs.FolderContentsResponse response = new FolderDTOs.FolderContentsResponse();
         response.setFolders(folders);

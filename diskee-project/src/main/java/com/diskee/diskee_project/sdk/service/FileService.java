@@ -7,7 +7,8 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import org.apache.tika.Tika;
-import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;   
 import org.springframework.core.io.Resource;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
@@ -27,19 +28,28 @@ import com.diskee.diskee_project.utils.EntityUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.tika.Tika;
+import org.springframework.core.io.Resource;
+import org.springframework.data.jpa.domain.Specification;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.Collection;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class FileService {
-
     private final FileRepo fileRepository;
     private final S3Service diskService;
     private final CurrentUserService currentUserService;
     private final FolderRepo folderRepo;
     private final CacheInvalidationService cacheInvalidationService;
 
-    @Cacheable(value = "file_metadata", key = "#id")
     @Transactional(readOnly = true)
     public FileEntity findById(Long id) {
         return findById(id, false);
@@ -91,7 +101,6 @@ public class FileService {
         FileEntity file = fileRepository.findById(fileId).orElse(null);
         if (file == null) return;
 
-        // Запоминаем родителя до удаления
         Long parentId = file.getParentFolder() != null ? file.getParentFolder().getId() : null;
 
         boolean deletedFromStorage = diskService.deleteByKey(file.getStorageObjectKey());
@@ -195,7 +204,6 @@ public class FileService {
         return fileEntity;
     }
 
-    // Вспомогательные методы остаются без изменений...
     private String extractFilenameFromKey(String key) {
         return key.contains("/") ? key.substring(key.lastIndexOf('/') + 1) : key;
     }

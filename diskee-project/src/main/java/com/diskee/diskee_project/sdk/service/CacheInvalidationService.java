@@ -18,7 +18,6 @@ public class CacheInvalidationService {
 
     private final CacheManager cacheManager;
 
-    // Имя кеша, используемое в аннотациях
     private static final String FOLDER_CONTENTS_CACHE = "folder_contents";
     private static final String FILE_METADATA_CACHE = "file_metadata";
     private static final String ROOT_KEY_SUFFIX = "root";
@@ -73,10 +72,10 @@ public class CacheInvalidationService {
     private void doEvict(String cacheName, String key) {
         Cache cache = cacheManager.getCache(cacheName);
         if (cache != null) {
-            log.warn("EVICTING cache={} key={}", cacheName, key);   // добавьте
+            log.warn("EVICTING cache={} key={}", cacheName, key);
             cache.evict(key);
         } else {
-            log.error("Cache {} not found!", cacheName);            // добавьте
+            log.error("Cache {} not found!", cacheName);
         }
     }
 }

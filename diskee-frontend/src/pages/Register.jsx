@@ -30,8 +30,8 @@ const Register = () => {
       return;
     }
 
-    if (formData.password.length < 6) {
-      setError('Пароль должен содержать минимум 6 символов');
+    if (formData.password.length < 8) {
+      setError('Пароль должен содержать минимум 8 символов');
       return;
     }
 
@@ -92,7 +92,7 @@ const Register = () => {
               value={formData.password}
               onChange={handleChange}
               required
-              placeholder="Минимум 6 символов"
+              placeholder="Минимум 8 символов"
             />
           </div>
 
