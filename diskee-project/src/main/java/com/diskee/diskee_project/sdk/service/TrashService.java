@@ -56,7 +56,7 @@ public class TrashService {
         TrashBinEntity saved = trashBinRepo.save(trash);
 
         Objects.requireNonNull(cacheManager.getCache("file_metadata")).evict(fileId);
-        Objects.requireNonNull(cacheManager.getCache("folder_contents")).clear();
+        Objects.requireNonNull(cacheManager.getCache("file_folder_contents")).clear();
 
         log.info("Файл перемещён в корзину: {}", file.getFileName());
         return saved;
@@ -90,7 +90,7 @@ public class TrashService {
 
         trashBinRepo.save(trash);
 
-        Objects.requireNonNull(cacheManager.getCache("folder_contents")).clear();
+        Objects.requireNonNull(cacheManager.getCache("file_folder_contents")).clear();
 
         log.info("Папка перемещена в корзину: {}", folder.getFolderName());
     }
@@ -173,7 +173,7 @@ public class TrashService {
         if (fileId != null) {
             Objects.requireNonNull(cacheManager.getCache("file_metadata")).evict(fileId);
         }
-        Objects.requireNonNull(cacheManager.getCache("folder_contents")).clear();
+        Objects.requireNonNull(cacheManager.getCache("file_folder_contents")).clear();
         Objects.requireNonNull(cacheManager.getCache("storage_info")).clear();
     }
 
@@ -195,7 +195,7 @@ public class TrashService {
         trashBinRepo.deleteAll(allTrash);
 
         Objects.requireNonNull(cacheManager.getCache("file_metadata")).clear();
-        Objects.requireNonNull(cacheManager.getCache("folder_contents")).clear();
+        Objects.requireNonNull(cacheManager.getCache("file_folder_contents")).clear();
         Objects.requireNonNull(cacheManager.getCache("storage_info")).clear();
 
         log.info("Корзина очищена для пользователя {}", userId);
@@ -218,7 +218,7 @@ public class TrashService {
 
         if (!expired.isEmpty()) {
             Objects.requireNonNull(cacheManager.getCache("file_metadata")).clear();
-            Objects.requireNonNull(cacheManager.getCache("folder_contents")).clear();
+            Objects.requireNonNull(cacheManager.getCache("file_folder_contents")).clear();
             Objects.requireNonNull(cacheManager.getCache("storage_info")).clear();
         }
 
