@@ -130,6 +130,8 @@ public class FileService {
         FileEntity file = fileRepository.findById(fileId)
                 .orElseThrow(() -> new RuntimeException("File not found: " + fileId));
 
+        Long oldParentId = file.getParentFolder() != null ? file.getParentFolder().getId() : null;
+
         FolderEntity target = null;
         if (targetFolderId != null) {
             target = folderRepo.findById(targetFolderId)
@@ -139,9 +141,16 @@ public class FileService {
         file.setParentFolder(target);
         file = fileRepository.saveAndFlush(file);
         log.info("File moved: {} -> folder {}", file.getFileName(), targetFolderId);
-        evictFolderCache();
+        
+        Long userId = currentUserService.getUser().getId();
+        Cache cache = cacheManager.getCache("file_folder_contents");
+        if (cache != null) {
+            cache.evict(userId + "-" + (oldParentId != null ? oldParentId : "root"));
+            cache.evict(userId + "-" + (targetFolderId != null ? targetFolderId : "root"));
+        }
+        
         return file;
-    }
+    }   
 
     @Transactional(readOnly = true)
     public FileEntity findById(Long id, boolean deleted) {
