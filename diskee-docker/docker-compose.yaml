@@ -15,7 +15,7 @@ services:
     image: redis:7-alpine
     container_name: diskee-redis
     ports:
-      - "6379:6379"
+      - "${REDIS_PORT}:6379"
     volumes:
       - redis_data:/data
     healthcheck:
@@ -36,12 +36,17 @@ services:
       S3_ACCESS_KEY: ${S3_ACCESS_KEY}
       S3_SECRET_KEY: ${S3_SECRET_KEY}
       S3_BUCKET: ${S3_BUCKET}
-      REDIS_HOST: redis
-      REDIS_PORT: 6379
+      REDIS_HOST: ${REDIS_HOST}
+      REDIS_PORT: ${REDIS_PORT}
     depends_on:
       - db
       - redis
-
+  ui:
+    build: ../diskee-frontend/.
+    ports:
+      - "3000:80"
+    depends_on:
+      - app
 volumes:
   pgdata:
   redis_data:
