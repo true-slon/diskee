@@ -18,5 +18,6 @@ public interface FolderRepo extends JpaRepository<FolderEntity, Long>, JpaSpecif
 
     List<FolderEntity> findAllByParentFolderIsNullAndDeletedAtIsNull();
 
+    List<FolderEntity> findByParentFolderIdAndUserIdAndDeletedAtIsNull(Long parentFolderId, Long userId);
 
 }

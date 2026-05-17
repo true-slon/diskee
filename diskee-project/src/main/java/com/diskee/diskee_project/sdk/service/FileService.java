@@ -56,32 +56,24 @@ public class FileService {
         return findById(id, false);
     }
 
-    // @Cacheable(value = "folder_contents", key = "#parentFolderId != null ? #parentFolderId : 'root'")
-    // @Transactional(readOnly = true)
-    // public List<FileDTOs.FileResponse> getFiles(Long parentFolderId) {
-    //     List<FileEntity> files;
-    //     if (parentFolderId == null) {
-    //         files = fileRepository.findByUserIdAndParentFolderIsNullAndIsDeletedFalse(
-    //             currentUserService.getUser().getId()
-    //         );
-    //     } else {
-    //         files = fileRepository.findByParentFolderIdAndIsDeletedFalse(parentFolderId);
-    //     }
-    //     return files.stream().map(this::toFileResponse).collect(Collectors.toList());
-    // }
-
-   // @Cacheable(value = "folder_contents", key = "#parentFolderId != null ? #parentFolderId : 'root'")
+    @Cacheable(value = "folder_contents", key = "T(org.springframework.security.core.context.SecurityContextHolder).getContext().getAuthentication().getName() + '-' + (#parentFolderId != null ? #parentFolderId : 'root')")
     @Transactional(readOnly = true)
     public List<FileDTOs.FileResponse> getFiles(Long parentFolderId) {
         List<FileEntity> files;
         if (parentFolderId == null) {
-            files = fileRepository.findAllByParentFolderIsNullAndIsDeletedFalse();
+            files = fileRepository.findByUserIdAndParentFolderIsNullAndIsDeletedFalse(
+                currentUserService.getUser().getId()
+            );
         } else {
-            files = fileRepository.findByParentFolderIdAndIsDeletedFalse(parentFolderId);
+            files = fileRepository.findByParentFolderIdAndUserIdAndIsDeletedFalse(
+                parentFolderId, currentUserService.getUser().getId()
+            );
         }
         return files.stream().map(this::toFileResponse).collect(Collectors.toList());
     }
-    @CacheEvict(value = "folder_contents", allEntries = true)
+
+   
+    @CacheEvict(value = "folder_contents", key = "T(org.springframework.security.core.context.SecurityContextHolder).getContext().getAuthentication().getName() + '-root'")
     @Transactional
     public FileEntity create(MultipartFile file) {
         UploadedFile uploadedFile = diskService.uploadFile(file);

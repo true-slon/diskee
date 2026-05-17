@@ -17,5 +17,7 @@ public interface FileRepo extends JpaRepository<FileEntity, Long>, JpaSpecificat
     List<FileEntity> findAllByParentFolderId(Long parentFolderId);
 
     List<FileEntity> findAllByParentFolderIsNullAndIsDeletedFalse();
+    List<FileEntity> findByParentFolderIdAndUserIdAndIsDeletedFalse(Long parentFolderId, Long userId);
+
 
 }
