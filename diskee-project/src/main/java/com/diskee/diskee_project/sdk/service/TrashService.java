@@ -145,6 +145,7 @@ public class TrashService {
             restoreFolderRecursively(sub);
         }
     }
+
     @Transactional
     public void permanentDelete(Long trashId) {
         TrashBinEntity trash = trashBinRepo.findById(trashId)
@@ -159,16 +160,16 @@ public class TrashService {
             if (file.getPreviewObjectKey() != null) {
                 diskService.deleteByKey(file.getPreviewObjectKey());
             }
+            trashBinRepo.delete(trash);
             fileRepo.delete(file);
             log.info("Файл удалён навсегда: {}", file.getFileName());
         }
 
         if (trash.getFolder() != null) {
+            trashBinRepo.delete(trash);
             folderRepo.delete(trash.getFolder());
             log.info("Папка удалена навсегда: {}", trash.getFolder().getFolderName());
         }
-
-        trashBinRepo.delete(trash);
 
         if (fileId != null) {
             Objects.requireNonNull(cacheManager.getCache("file_metadata")).evict(fileId);
@@ -185,14 +186,14 @@ public class TrashService {
         for (TrashBinEntity trash : allTrash) {
             if (trash.getFile() != null) {
                 diskService.deleteByKey(trash.getFile().getStorageObjectKey());
+                trashBinRepo.delete(trash);
                 fileRepo.delete(trash.getFile());
             }
             if (trash.getFolder() != null) {
+                trashBinRepo.delete(trash);
                 folderRepo.delete(trash.getFolder());
             }
         }
-
-        trashBinRepo.deleteAll(allTrash);
 
         Objects.requireNonNull(cacheManager.getCache("file_metadata")).clear();
         Objects.requireNonNull(cacheManager.getCache("file_folder_contents")).clear();
@@ -208,12 +209,13 @@ public class TrashService {
         for (TrashBinEntity trash : expired) {
             if (trash.getFile() != null) {
                 diskService.deleteByKey(trash.getFile().getStorageObjectKey());
+                trashBinRepo.delete(trash);
                 fileRepo.delete(trash.getFile());
             }
             if (trash.getFolder() != null) {
+                trashBinRepo.delete(trash);
                 folderRepo.delete(trash.getFolder());
             }
-            trashBinRepo.delete(trash);
         }
 
         if (!expired.isEmpty()) {
