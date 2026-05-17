@@ -5,7 +5,9 @@ import com.diskee.diskee_project.sdk.data.SharedLinkEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 
+import java.util.Optional;
 import java.util.UUID;
 
 public interface SharedLinkRepo extends JpaRepository<SharedLinkEntity, UUID>, JpaSpecificationExecutor<SharedLinkEntity> {
+    Optional<Object> findByToken(String token);
 }
