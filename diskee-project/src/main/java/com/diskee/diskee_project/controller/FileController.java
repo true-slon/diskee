@@ -39,8 +39,8 @@ public class FileController {
     //     return ResponseEntity.ok(saved);
     // }
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<FileDTOs.FileResponse> upload(@RequestParam("file") MultipartFile file) {
-        FileEntity saved = fileService.create(file);
+    public ResponseEntity<FileDTOs.FileResponse> upload(@RequestParam("file") MultipartFile file, @RequestParam("parentFolderId") Long parentId) {
+        FileEntity saved = fileService.create(file, parentId);
         return ResponseEntity.ok(fileService.toFileResponse(saved));  
     }
     @GetMapping("/{fileId}")

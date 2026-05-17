@@ -7,8 +7,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import org.apache.tika.Tika;
-import org.springframework.cache.annotation.CacheEvict;
-import org.springframework.cache.annotation.Cacheable;   
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.core.io.Resource;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
@@ -28,27 +27,18 @@ import com.diskee.diskee_project.utils.EntityUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.tika.Tika;
-import org.springframework.core.io.Resource;
-import org.springframework.data.jpa.domain.Specification;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.multipart.MultipartFile;
-
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.Collection;
-import java.util.List;
 
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class FileService {
+
     private final FileRepo fileRepository;
     private final S3Service diskService;
     private final CurrentUserService currentUserService;
     private final FolderRepo folderRepo;
-
+    private final CacheInvalidationService cacheInvalidationService;
+    private final FolderService folderService;
 
     @Cacheable(value = "file_metadata", key = "#id")
     @Transactional(readOnly = true)
@@ -56,30 +46,33 @@ public class FileService {
         return findById(id, false);
     }
 
-    @Cacheable(value = "folder_contents", key = "T(org.springframework.security.core.context.SecurityContextHolder).getContext().getAuthentication().getName() + '-' + (#parentFolderId != null ? #parentFolderId : 'root')")
+    //@Cacheable(value = "folder_contents", key = "T(org.springframework.security.core.context.SecurityContextHolder).getContext().getAuthentication().getName() + '-' + (#parentFolderId != null ? #parentFolderId : 'root')")
     @Transactional(readOnly = true)
     public List<FileDTOs.FileResponse> getFiles(Long parentFolderId) {
         List<FileEntity> files;
         if (parentFolderId == null) {
             files = fileRepository.findByUserIdAndParentFolderIsNullAndIsDeletedFalse(
-                currentUserService.getUser().getId()
+                    currentUserService.getUser().getId()
             );
         } else {
             files = fileRepository.findByParentFolderIdAndUserIdAndIsDeletedFalse(
-                parentFolderId, currentUserService.getUser().getId()
+                    parentFolderId, currentUserService.getUser().getId()
             );
         }
+        log.info("Куррент юзер" + currentUserService.getUser().getId());
         return files.stream().map(this::toFileResponse).collect(Collectors.toList());
     }
 
-   
-    @CacheEvict(value = "folder_contents", key = "T(org.springframework.security.core.context.SecurityContextHolder).getContext().getAuthentication().getName() + '-root'")
     @Transactional
-    public FileEntity create(MultipartFile file) {
+    public FileEntity create(MultipartFile file, Long parentId) {
         UploadedFile uploadedFile = diskService.uploadFile(file);
-
+        FolderEntity folder = null;
+        if (parentId != null) {
+            folder = folderRepo.findById(parentId).orElseThrow();
+        }
         FileEntity fileEntity = FileEntity.builder()
                 .user(currentUserService.getUser())
+                .parentFolder(folder)
                 .storageObjectKey(uploadedFile.getKey())
                 .fileName(uploadedFile.getFilename())
                 .fileExtension(uploadedFile.getExtension())
@@ -90,14 +83,19 @@ public class FileService {
 
         fileRepository.saveAndFlush(fileEntity);
         log.info("File entity stored: {}", fileEntity);
+
+        // Файл создаётся в корне – инвалидируем корень
+        cacheInvalidationService.evictFolderContents(parentId);
         return fileEntity;
     }
 
-    @CacheEvict(value = { "file_metadata", "folder_contents" }, allEntries = true)
     @Transactional
     public void delete(Long fileId) {
         FileEntity file = fileRepository.findById(fileId).orElse(null);
         if (file == null) return;
+
+        // Запоминаем родителя до удаления
+        Long parentId = file.getParentFolder() != null ? file.getParentFolder().getId() : null;
 
         boolean deletedFromStorage = diskService.deleteByKey(file.getStorageObjectKey());
         if (!deletedFromStorage) {
@@ -106,13 +104,17 @@ public class FileService {
 
         file.setDeleted(true);
         fileRepository.save(file);
+
+        cacheInvalidationService.evictFileMetadata(fileId);
+        cacheInvalidationService.evictFolderContents(parentId);
     }
 
-    @CacheEvict(value = "folder_contents", allEntries = true)
     @Transactional
     public FileEntity moveFile(Long fileId, Long targetFolderId) {
         FileEntity file = fileRepository.findById(fileId)
                 .orElseThrow(() -> new RuntimeException("File not found: " + fileId));
+
+        Long oldParentId = file.getParentFolder() != null ? file.getParentFolder().getId() : null;
 
         FolderEntity target = null;
         if (targetFolderId != null) {
@@ -123,9 +125,11 @@ public class FileService {
         file.setParentFolder(target);
         file = fileRepository.saveAndFlush(file);
         log.info("File moved: {} -> folder {}", file.getFileName(), targetFolderId);
+
+        cacheInvalidationService.evictFolderContents(oldParentId);
+        cacheInvalidationService.evictFolderContents(targetFolderId);
         return file;
     }
-
 
     @Transactional(readOnly = true)
     public FileEntity findById(Long id, boolean deleted) {
@@ -143,11 +147,13 @@ public class FileService {
         EntityUtils.checkInconsistency(ids, entities, FileNotFoundProblem::new, deleted);
         return entities;
     }
+
     @Cacheable(value = "file_metadata", key = "#id")
     @Transactional(readOnly = true)
     public FileDTOs.FileResponse findByIdDto(Long id) {
         return toFileResponse(findById(id, false));
     }
+
     @Transactional(readOnly = true)
     public Resource getFileByKey(String key) {
         return diskService.getFileFromKey(key);
@@ -157,6 +163,11 @@ public class FileService {
     public void delete(List<Long> fileIds) {
         List<FileEntity> files = fileRepository.findAllById(fileIds);
         files.forEach(file -> {
+            // Собираем родительские папки для инвалидации
+            Long parentId = file.getParentFolder() != null ? file.getParentFolder().getId() : null;
+            cacheInvalidationService.evictFolderContents(parentId);
+            cacheInvalidationService.evictFileMetadata(file.getId());
+
             file.setDeleted(true);
             diskService.deleteByKey(file.getStorageObjectKey());
         });
@@ -181,9 +192,13 @@ public class FileService {
 
         fileRepository.saveAndFlush(fileEntity);
         log.info("File entity stored with custom name: {}", filename);
+
+        // По аналогии с обычным create – инвалидируем корень
+        cacheInvalidationService.evictFolderContentsRoot();
         return fileEntity;
     }
 
+    // Вспомогательные методы остаются без изменений...
     private String extractFilenameFromKey(String key) {
         return key.contains("/") ? key.substring(key.lastIndexOf('/') + 1) : key;
     }
