@@ -91,8 +91,11 @@ public class FileService {
 
         fileRepository.saveAndFlush(fileEntity);
         log.info("File entity stored: {}", fileEntity);
-
-        cacheInvalidationService.evictFolderContents(parentId);
+        if (parentId == null) {
+            cacheInvalidationService.evictFolderContentsRoot();
+        } else {
+            cacheInvalidationService.evictFolderContents(parentId);
+        }
         return fileEntity;
     }
 
@@ -199,7 +202,6 @@ public class FileService {
         fileRepository.saveAndFlush(fileEntity);
         log.info("File entity stored with custom name: {}", filename);
 
-        // По аналогии с обычным create – инвалидируем корень
         cacheInvalidationService.evictFolderContentsRoot();
         return fileEntity;
     }
