@@ -1,19 +1,22 @@
 package com.diskee.diskee_project.sdk.service;
 
-import com.diskee.diskee_project.api.request.UploadedFile;
-import io.minio.*;
-import lombok.SneakyThrows;
-import lombok.extern.slf4j.Slf4j;
+import java.io.InputStream;
+import java.util.UUID;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
-import software.amazon.awssdk.core.sync.RequestBody;
-import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
-import java.io.InputStream;
-import java.util.UUID;
+import com.diskee.diskee_project.api.request.UploadedFile;
+
+import io.minio.GetObjectArgs;
+import io.minio.MinioClient;
+import io.minio.PutObjectArgs;
+import io.minio.RemoveObjectArgs;
+import lombok.SneakyThrows;
+import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Service

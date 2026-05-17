@@ -5,105 +5,155 @@ import bytes from 'bytes';
 import { formatDistanceToNow } from 'date-fns';
 import { ru } from 'date-fns/locale';
 
-const FileItem = ({ file, viewMode, onFolderClick, onFileDeleted }) => {
-  const [showMenu, setShowMenu] = useState(false);
+const FileItem = ({ file, viewMode, onFolderClick, onFileDeleted, onDeleteToTrash, onDragStart, onDragOver, onDrop, onDragEnd, isDragTarget }) => {
+  const [contextMenu, setContextMenu] = useState(null);
+  const [isRenaming, setIsRenaming] = useState(false);
+  const [newName, setNewName] = useState('');
+  const [isDragOver, setIsDragOver] = useState(false);
   const queryClient = useQueryClient();
 
+  if (!file) return null;
+
+  const name = file.fileName || file.folderName || '';
+
   const deleteMutation = useMutation(
-    () => fileApi.deleteFile(file.fileName),
-    {
-      onSuccess: () => {
-        onFileDeleted();
-        queryClient.invalidateQueries('storage');
-      },
-    }
+    () => {
+      if (file.isFolder) return fileApi.deleteFolder(file.id);
+      return fileApi.moveToTrash(file.id);
+    },
+    { onSuccess: () => { onFileDeleted(); queryClient.invalidateQueries('storage'); } }
   );
 
-  const downloadMutation = useMutation(() => fileApi.downloadFile(file.fileName));
+  const renameMutation = useMutation(
+    (newNameValue) => {
+      if (file.isFolder) return fileApi.renameFolder(file.id, newNameValue);
+      return Promise.resolve();
+    },
+    { onSuccess: () => { onFileDeleted(); setIsRenaming(false); } }
+  );
 
   const getFileIcon = () => {
-    const ext = file.fileExtension?.toLowerCase();
     if (file.isFolder) return '📁';
+    const ext = file.fileExtension?.toLowerCase();
+    if (!ext) return '📎';
     if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext)) return '🖼️';
     if (['mp4', 'avi', 'mkv', 'mov'].includes(ext)) return '🎬';
     if (['mp3', 'wav', 'flac'].includes(ext)) return '🎵';
     if (['pdf'].includes(ext)) return '📄';
-    if (['doc', 'docx'].includes(ext)) return '📝';
-    if (['xls', 'xlsx'].includes(ext)) return '📊';
-    if (['zip', 'rar', '7z'].includes(ext)) return '🗜️';
     return '📎';
   };
 
   const formatDate = (date) => {
+    if (!date) return '';
     return formatDistanceToNow(new Date(date), { addSuffix: true, locale: ru });
   };
 
   const handleClick = () => {
-    if (file.isFolder) {
-      onFolderClick(file.id);
+    if (file.isFolder && !isRenaming) onFolderClick(file.id);
+  };
+
+  const handleContextMenu = (e) => {
+    e.preventDefault();
+    setContextMenu({ x: e.clientX, y: e.clientY });
+  };
+
+  const handleCloseMenu = () => setContextMenu(null);
+
+  const handleDelete = () => {
+    handleCloseMenu();
+    if (window.confirm(`Переместить "${name}" в корзину?`)) {
+      if (onDeleteToTrash) {
+        onDeleteToTrash();
+      } else {
+        deleteMutation.mutate();
+      }
     }
   };
 
-  const handleDownload = (e) => {
-    e.stopPropagation();
-    downloadMutation.mutate();
+  const handleRenameStart = () => {
+    handleCloseMenu();
+    const dotIndex = file.isFolder ? -1 : name.lastIndexOf('.');
+    setNewName(dotIndex > 0 ? name.substring(0, dotIndex) : name);
+    setIsRenaming(true);
   };
 
-  const handleDelete = (e) => {
+  const handleRenameSubmit = (e) => {
     e.stopPropagation();
-    if (window.confirm(`Удалить файл "${file.fileName}"?`)) {
-      deleteMutation.mutate();
-    }
+    const ext = !file.isFolder && name.includes('.') ? name.substring(name.lastIndexOf('.')) : '';
+    renameMutation.mutate(newName.trim() + ext);
   };
 
-  if (viewMode === 'grid') {
+  if (isRenaming) {
     return (
-      <div className="file-item-grid" onClick={handleClick}>
-        <div className="file-icon">{getFileIcon()}</div>
-        <div className="file-name" title={file.fileName}>
-          {file.fileName}
-        </div>
-        {!file.isFolder && (
-          <div className="file-meta">
-            <span className="file-size">{bytes(file.fileSizeBytes)}</span>
-            <span className="file-date">{formatDate(file.createdAt)}</span>
-          </div>
-        )}
-        {!file.isFolder && (
-          <div className="file-actions">
-            <button onClick={handleDownload} className="action-btn" title="Скачать">
-              ⬇️
-            </button>
-            <button onClick={handleDelete} className="action-btn" title="Удалить">
-              🗑️
-            </button>
-          </div>
-        )}
+      <div className={`file-item-${viewMode}`}>
+        <span className="file-icon">{getFileIcon()}</span>
+        <input value={newName} onChange={(e) => setNewName(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && handleRenameSubmit(e)}
+          onClick={(e) => e.stopPropagation()} autoFocus maxLength={255} />
+        <button onClick={handleRenameSubmit}>✅</button>
+        <button onClick={() => setIsRenaming(false)}>❌</button>
       </div>
     );
   }
 
+  const handleDragStart = (e) => {
+    if (onDragStart) onDragStart(e, file);
+  };
+
+  const handleDragOver = (e) => {
+    if (isDragTarget) {
+      e.preventDefault();
+      setIsDragOver(true);
+      if (onDragOver) onDragOver(e, file);
+    }
+  };
+
+  const handleDragLeave = () => {
+    setIsDragOver(false);
+  };
+
+  const handleDrop = (e) => {
+    setIsDragOver(false);
+    if (onDrop) onDrop(e, file);
+  };
+
   return (
-    <div className="file-item-list" onClick={handleClick}>
-      <div className="file-info">
-        <span className="file-icon">{getFileIcon()}</span>
-        <span className="file-name">{file.fileName}</span>
+    <>
+      <div
+        className={`file-item-${viewMode} ${isDragOver ? 'drag-over' : ''}`}
+        onClick={handleClick}
+        onContextMenu={handleContextMenu}
+        draggable
+        onDragStart={handleDragStart}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+        onDragEnd={onDragEnd}
+      >
+        <div className="file-icon">{getFileIcon()}</div>
+        <div className="file-name" title={name}>{name}</div>
+        {!file.isFolder && (
+          <>
+            <span className="file-size">{bytes(file.fileSizeBytes || 0)}</span>
+            <span className="file-date">{formatDate(file.createdAt)}</span>
+          </>
+        )}
       </div>
-      {!file.isFolder ? (
+
+      {contextMenu && (
         <>
-          <span className="file-size">{bytes(file.fileSizeBytes)}</span>
-          <span className="file-date">{formatDate(file.createdAt)}</span>
-          <div className="file-actions">
-            <button onClick={handleDownload} className="action-btn">Скачать</button>
-            <button onClick={handleDelete} className="action-btn delete">Удалить</button>
+          <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 998 }} onClick={handleCloseMenu} />
+          <div style={{
+            position: 'fixed', left: contextMenu.x, top: contextMenu.y, zIndex: 999,
+            background: 'white', border: '1px solid #ccc', borderRadius: 4,
+            padding: 8, boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
+          }}>
+            <div className="context-menu-item" onClick={handleRenameStart}>✏️ Переименовать</div>
+            <div className="context-menu-item" style={{ color: 'red' }} onClick={handleDelete}>🗑️ Удалить</div>
           </div>
         </>
-      ) : (
-        <div className="file-actions">
-          <span className="folder-hint">Открыть →</span>
-        </div>
       )}
-    </div>
+    </>
   );
 };
 

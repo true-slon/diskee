@@ -619,3 +619,123 @@ body {
     font-size: 12px;
   }
 }
+/* FileItem Grid */
+.file-item-grid {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 12px 8px;
+  width: 130px;
+  min-height: 120px;
+  text-align: center;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.file-item-grid:hover {
+  background: #f0f0f0;
+}
+
+.file-item-grid .file-icon {
+  font-size: 36px;
+  margin-bottom: 6px;
+}
+
+.file-item-grid .file-name {
+  word-break: break-word;
+  max-width: 100%;
+  font-size: 13px;
+  line-height: 1.3;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.file-item-grid .file-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 11px;
+  color: #888;
+  margin-top: 4px;
+}
+
+/* FileItem List */
+.file-item-list {
+  display: flex;
+  align-items: center;
+  padding: 8px 16px;
+  gap: 16px;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background 0.2s;
+}
+
+.file-item-list:hover {
+  background: #f0f0f0;
+}
+
+.file-item-list .file-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+
+.file-item-list .file-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Context menu */
+.context-menu {
+  font-size: 14px;
+  font-family: sans-serif;
+}
+
+.context-menu-item {
+  padding: 8px 16px;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background 0.1s;
+}
+
+.context-menu-item:hover {
+  background: #e8e8e8;
+}
+.drag-over {
+  background: #d4edff !important;
+  border: 2px dashed #007bff !important;
+  border-radius: 8px;
+}
+.view-controls {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.create-folder-btn {
+  padding: 8px 16px;
+  background: #007bff;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.create-folder-btn:hover {
+  background: #0056b3;
+}
+
+.view-btns {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+}
