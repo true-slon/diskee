@@ -1,11 +1,13 @@
 package com.diskee.diskee_project.sdk.service;
+
 import java.util.List;
 import java.util.stream.Collectors;
 
-import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.cache.annotation.Cacheable;   
+
 import com.diskee.diskee_project.dto.FolderDTOs.FolderRequest;
 import com.diskee.diskee_project.dto.FolderDTOs.FolderResponse;
 import com.diskee.diskee_project.sdk.data.FolderEntity;
@@ -22,10 +24,31 @@ public class FolderService {
     private final FolderRepo folderRepo;
     private final CurrentUserService currentUserService;
     private final TrashService trashService;
+    private final CacheManager cacheManager;
 
-    @Cacheable(value = "folder_contents", key = "T(org.springframework.security.core.context.SecurityContextHolder).getContext().getAuthentication().getName() + '-' + (#parentId != null ? #parentId : 'root')")
+    private void evictFolderCache() {
+        String key = currentUserService.getUser().getId() + "-root";
+        Cache cache = cacheManager.getCache("folder_folder_contents");
+        if (cache != null) {
+            cache.evict(key);
+            log.info("CACHE EVICT: {}", key);
+        }
+    }
+
     @Transactional(readOnly = true)
     public List<FolderResponse> getFolders(Long parentId) {
+        String cacheKey = currentUserService.getUser().getId() + "-" + (parentId != null ? parentId : "root");
+        
+        Cache cache = cacheManager.getCache("folder_folder_contents");
+        if (cache != null) {
+            Cache.ValueWrapper cached = cache.get(cacheKey);
+            if (cached != null) {
+                log.info("CACHE HIT: {}", cacheKey);
+                return (List<FolderResponse>) cached.get();
+            }
+        }
+        
+        log.info("CACHE MISS: {}, querying DB", cacheKey);
         List<FolderEntity> folders;
         if (parentId == null) {
             folders = folderRepo.findByUserIdAndParentFolderIsNullAndDeletedAtIsNull(
@@ -36,11 +59,16 @@ public class FolderService {
                 parentId, currentUserService.getUser().getId()
             );
         }
-        return folders.stream().map(this::toResponse).collect(Collectors.toList());
+        
+        List<FolderResponse> result = folders.stream().map(this::toResponse).collect(Collectors.toList());
+        
+        if (cache != null && !result.isEmpty()) {
+            cache.put(cacheKey, result);
+        }     
+        
+        return result;
     }
 
-
-    @CacheEvict(value = "folder_contents", key = "T(org.springframework.security.core.context.SecurityContextHolder).getContext().getAuthentication().getName() + '-root'")
     @Transactional
     public FolderResponse create(FolderRequest request) {
         FolderEntity parent = null;
@@ -61,10 +89,10 @@ public class FolderService {
 
         folder = folderRepo.saveAndFlush(folder);
         log.info("Folder created: {}", folder.getFolderName());
+        evictFolderCache();
         return toResponse(folder);
     }
 
-    @CacheEvict(value = "folder_contents", allEntries = true)
     @Transactional
     public FolderResponse rename(Long folderId, String newName) {
         FolderEntity folder = folderRepo.findById(folderId)
@@ -77,10 +105,10 @@ public class FolderService {
         folder.setFullPath(newPath);
         folder = folderRepo.saveAndFlush(folder);
         log.info("Folder renamed: {} -> {}", oldPath, newPath);
+        evictFolderCache();
         return toResponse(folder);
     }
 
-    @CacheEvict(value = "folder_contents", allEntries = true)
     @Transactional
     public FolderResponse move(Long folderId, Long targetFolderId) {
         FolderEntity folder = folderRepo.findById(folderId)
@@ -112,10 +140,10 @@ public class FolderService {
         folder.setFullPath(newPath);
         folder = folderRepo.saveAndFlush(folder);
         log.info("Folder moved: {} -> {}", folder.getFolderName(), newPath);
+        evictFolderCache();
         return toResponse(folder);
     }
 
-    @CacheEvict(value = "folder_contents", allEntries = true)
     @Transactional
     public FolderResponse copy(Long folderId, Long targetFolderId) {
         FolderEntity original = folderRepo.findById(folderId)
@@ -141,13 +169,14 @@ public class FolderService {
 
         copy = folderRepo.saveAndFlush(copy);
         log.info("Folder copied: {} -> {}", original.getFolderName(), newPath);
+        evictFolderCache();
         return toResponse(copy);
     }
     
-    @CacheEvict(value = "folder_contents", allEntries = true)
     @Transactional
     public void delete(Long folderId) {
-        trashService.moveFolderToTrash(folderId);  
+        trashService.moveFolderToTrash(folderId);
+        evictFolderCache();
     }
 
     private FolderResponse toResponse(FolderEntity entity) {
