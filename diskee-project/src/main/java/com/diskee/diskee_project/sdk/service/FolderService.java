@@ -3,6 +3,8 @@ package com.diskee.diskee_project.sdk.service;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import com.diskee.diskee_project.dto.FileDTOs;
+import com.diskee.diskee_project.dto.FolderDTOs;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,9 +26,9 @@ public class FolderService {
     private final CurrentUserService currentUserService;
     private final TrashService trashService;
     private final CacheInvalidationService cacheInvalidationService;
+    private final FileService fileService;
 
 
-    @Cacheable(value = "folder_contents", key = "T(org.springframework.security.core.context.SecurityContextHolder).getContext().getAuthentication().getName() + '-' + (#parentId != null ? #parentId : 'root')")
     @Transactional(readOnly = true)
     public List<FolderResponse> getFolders(Long parentId) {
         List<FolderEntity> folders;
@@ -172,6 +174,20 @@ public class FolderService {
 
         // Инвалидация родительской папки, из которой исчезла папка
         cacheInvalidationService.evictFolderContents(parentId);
+    }
+
+    @Transactional
+    @Cacheable(value = "folder_contents", key = "T(org.springframework.security.core.context.SecurityContextHolder).getContext().getAuthentication().getName() + '-' + (#parentId != null ? #parentId : 'root')")
+    public FolderDTOs.FolderContentsResponse getContents(Long id) {
+        List<FolderResponse> folders = getFolders(id);
+        List<FileDTOs.FileResponse> files = fileService.getFiles(id);
+
+        FolderDTOs.FolderContentsResponse response = new FolderDTOs.FolderContentsResponse();
+        response.setFolders(folders);
+        response.setFiles(files);
+        response.setTotalFolders(folders.size());
+        response.setTotalFiles(files.size());
+        return response;
     }
 
     private FolderResponse toResponse(FolderEntity entity) {

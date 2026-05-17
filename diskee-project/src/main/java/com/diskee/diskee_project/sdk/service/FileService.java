@@ -38,7 +38,6 @@ public class FileService {
     private final CurrentUserService currentUserService;
     private final FolderRepo folderRepo;
     private final CacheInvalidationService cacheInvalidationService;
-    private final FolderService folderService;
 
     @Cacheable(value = "file_metadata", key = "#id")
     @Transactional(readOnly = true)
@@ -46,7 +45,6 @@ public class FileService {
         return findById(id, false);
     }
 
-    //@Cacheable(value = "folder_contents", key = "T(org.springframework.security.core.context.SecurityContextHolder).getContext().getAuthentication().getName() + '-' + (#parentFolderId != null ? #parentFolderId : 'root')")
     @Transactional(readOnly = true)
     public List<FileDTOs.FileResponse> getFiles(Long parentFolderId) {
         List<FileEntity> files;
@@ -84,7 +82,6 @@ public class FileService {
         fileRepository.saveAndFlush(fileEntity);
         log.info("File entity stored: {}", fileEntity);
 
-        // Файл создаётся в корне – инвалидируем корень
         cacheInvalidationService.evictFolderContents(parentId);
         return fileEntity;
     }

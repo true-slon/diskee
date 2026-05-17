@@ -2,6 +2,7 @@ package com.diskee.diskee_project.controller;
 
 import java.util.List;
 
+import jakarta.persistence.Cacheable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -34,16 +35,8 @@ public class FolderController {
     @GetMapping
     public ResponseEntity<FolderContentsResponse> getContents(
             @RequestParam(required = false) Long parentId) {
-        List<FolderResponse> folders = folderService.getFolders(parentId);
-        List<FileResponse> files = fileService.getFiles(parentId);
-        
-        FolderContentsResponse response = new FolderContentsResponse();
-        response.setFolders(folders);
-        response.setFiles(files);
-        response.setTotalFolders(folders.size());
-        response.setTotalFiles(files.size());
-        
-        return ResponseEntity.ok(response);
+
+        return ResponseEntity.ok(folderService.getContents(parentId));
     }
 
     @PostMapping
