@@ -24,7 +24,14 @@ spring:
     multipart:
       max-file-size: 4GB
       max-request-size: 4GB
+  cache:
+    type: redis
+    redis:
+      time-to-live: 86400000    
   data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
     rest:
       detection-strategy: annotated
       max-page-size: 2147483647

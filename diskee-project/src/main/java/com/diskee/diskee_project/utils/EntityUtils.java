@@ -1,16 +1,15 @@
 package com.diskee.diskee_project.utils;
 
-import lombok.SneakyThrows;
-import org.hibernate.mapping.SoftDeletable;
-import org.springframework.lang.NonNull;
-import org.springframework.lang.Nullable;
-
 import java.util.Collection;
 import java.util.Objects;
 import java.util.Set;
-import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+
+import org.springframework.lang.NonNull;
+import org.springframework.lang.Nullable;
+
+import lombok.SneakyThrows;
 
 public class EntityUtils {
     @SneakyThrows

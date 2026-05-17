@@ -1,0 +1,169 @@
+package com.diskee.diskee_project.sdk.service;
+import java.util.List;
+import java.util.stream.Collectors;
+
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.diskee.diskee_project.dto.FolderDTOs.FolderRequest;
+import com.diskee.diskee_project.dto.FolderDTOs.FolderResponse;
+import com.diskee.diskee_project.sdk.data.FolderEntity;
+import com.diskee.diskee_project.sdk.data.repo.FolderRepo;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+
+@Service
+@RequiredArgsConstructor
+@Slf4j
+public class FolderService {
+
+    private final FolderRepo folderRepo;
+    private final CurrentUserService currentUserService;
+    private final TrashService trashService;
+
+    // @Cacheable(value = "folder_contents", key = "#parentId != null ? #parentId : 'root'")
+    // @Transactional(readOnly = true)
+    // public List<FolderResponse> getFolders(Long parentId) {
+    //     List<FolderEntity> folders;
+    //     if (parentId == null) {
+    //         folders = folderRepo.findByUserIdAndParentFolderIsNullAndDeletedAtIsNull(
+    //             currentUserService.getUser().getId()
+    //         );
+    //     } else {
+    //         folders = folderRepo.findByParentFolderIdAndDeletedAtIsNull(parentId);
+    //     }
+    //     return folders.stream().map(this::toResponse).collect(Collectors.toList());
+    // }
+    @Transactional(readOnly = true)
+    public List<FolderResponse> getFolders(Long parentId) {
+        List<FolderEntity> folders;
+        if (parentId == null) {
+            folders = folderRepo.findAllByParentFolderIsNullAndDeletedAtIsNull();
+        } else {
+            folders = folderRepo.findByParentFolderIdAndDeletedAtIsNull(parentId);
+        }
+        return folders.stream().map(this::toResponse).collect(Collectors.toList());
+    }
+    @CacheEvict(value = "folder_contents", allEntries = true)
+    @Transactional
+    public FolderResponse create(FolderRequest request) {
+        FolderEntity parent = null;
+        if (request.getParentFolderId() != null) {
+            parent = folderRepo.findById(request.getParentFolderId()).orElse(null);
+        }
+
+        String fullPath = (parent != null)
+            ? parent.getFullPath() + "/" + request.getFolderName()
+            : "/" + request.getFolderName();
+
+        FolderEntity folder = FolderEntity.builder()
+            .user(currentUserService.getUser())
+            .parentFolder(parent)
+            .folderName(request.getFolderName())
+            .fullPath(fullPath)
+            .build();
+
+        folder = folderRepo.saveAndFlush(folder);
+        log.info("Folder created: {}", folder.getFolderName());
+        return toResponse(folder);
+    }
+
+    @CacheEvict(value = "folder_contents", allEntries = true)
+    @Transactional
+    public FolderResponse rename(Long folderId, String newName) {
+        FolderEntity folder = folderRepo.findById(folderId)
+            .orElseThrow(() -> new RuntimeException("Folder not found: " + folderId));
+
+        String oldPath = folder.getFullPath();
+        String newPath = oldPath.substring(0, oldPath.lastIndexOf("/") + 1) + newName;
+
+        folder.setFolderName(newName);
+        folder.setFullPath(newPath);
+        folder = folderRepo.saveAndFlush(folder);
+        log.info("Folder renamed: {} -> {}", oldPath, newPath);
+        return toResponse(folder);
+    }
+
+    @CacheEvict(value = "folder_contents", allEntries = true)
+    @Transactional
+    public FolderResponse move(Long folderId, Long targetFolderId) {
+        FolderEntity folder = folderRepo.findById(folderId)
+            .orElseThrow(() -> new RuntimeException("Folder not found: " + folderId));
+
+        if (folderId.equals(targetFolderId)) {
+            throw new RuntimeException("Cannot move folder into itself");
+        }
+
+        FolderEntity target = null;
+        if (targetFolderId != null) {
+            target = folderRepo.findById(targetFolderId)
+                .orElseThrow(() -> new RuntimeException("Target folder not found: " + targetFolderId));
+
+            FolderEntity current = target;
+            while (current != null) {
+                if (current.getId().equals(folderId)) {
+                    throw new RuntimeException("Cannot move folder into its own subfolder");
+                }
+                current = current.getParentFolder();
+            }
+        }
+
+        String newPath = (target != null)
+            ? target.getFullPath() + "/" + folder.getFolderName()
+            : "/" + folder.getFolderName();
+
+        folder.setParentFolder(target);
+        folder.setFullPath(newPath);
+        folder = folderRepo.saveAndFlush(folder);
+        log.info("Folder moved: {} -> {}", folder.getFolderName(), newPath);
+        return toResponse(folder);
+    }
+
+    @CacheEvict(value = "folder_contents", allEntries = true)
+    @Transactional
+    public FolderResponse copy(Long folderId, Long targetFolderId) {
+        FolderEntity original = folderRepo.findById(folderId)
+            .orElseThrow(() -> new RuntimeException("Folder not found: " + folderId));
+
+        FolderEntity target = null;
+        if (targetFolderId != null) {
+            target = folderRepo.findById(targetFolderId)
+                .orElseThrow(() -> new RuntimeException("Target folder not found: " + targetFolderId));
+        }
+
+        String newName = original.getFolderName() + " (копия)";
+        String newPath = (target != null)
+            ? target.getFullPath() + "/" + newName
+            : "/" + newName;
+
+        FolderEntity copy = FolderEntity.builder()
+            .user(currentUserService.getUser())
+            .parentFolder(target)
+            .folderName(newName)
+            .fullPath(newPath)
+            .build();
+
+        copy = folderRepo.saveAndFlush(copy);
+        log.info("Folder copied: {} -> {}", original.getFolderName(), newPath);
+        return toResponse(copy);
+    }
+    
+    @CacheEvict(value = "folder_contents", allEntries = true)
+    @Transactional
+    public void delete(Long folderId) {
+        trashService.moveFolderToTrash(folderId);  
+    }
+
+    private FolderResponse toResponse(FolderEntity entity) {
+        FolderResponse response = new FolderResponse();
+        response.setId(entity.getId());
+        response.setFolderName(entity.getFolderName());
+        response.setFullPath(entity.getFullPath());
+        response.setParentFolderId(entity.getParentFolder() != null ? entity.getParentFolder().getId() : null);
+        response.setCreatedAt(entity.getCreatedAt());
+        response.setUpdatedAt(entity.getUpdatedAt());
+        return response;
+    }
+}

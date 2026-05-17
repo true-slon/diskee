@@ -1,67 +1,73 @@
 import axios from './axios';
 
 export const fileApi = {
-  // Загрузка файла
+  getContents: (parentId = null) => {
+    const params = parentId ? { parentId } : {};
+    return axios.get('/api/folders', { params });
+  },
+
   uploadFile: (file, parentFolderId = null) => {
     const formData = new FormData();
     formData.append('file', file);
     if (parentFolderId) {
       formData.append('parentFolderId', parentFolderId);
     }
-    
-    return axios.post('/files/upload', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-      onUploadProgress: (progressEvent) => {
-        const percentCompleted = Math.round(
-          (progressEvent.loaded * 100) / progressEvent.total
-        );
-        // Можно использовать для отображения прогресса загрузки
-        console.log(`Upload progress: ${percentCompleted}%`);
-      },
+    return axios.post('/api/files', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
     });
   },
 
-  // Получение списка файлов в папке
-  getFiles: (folderId = null) => {
-    const url = folderId ? `/folders/${folderId}/files` : '/files/root';
-    return axios.get(url);
+  downloadFile: (fileId) => {
+    return axios.get(`/api/files/${fileId}`, { responseType: 'blob' })
+      .then(response => {
+        const disposition = response.headers['content-disposition'];
+        let fileName = 'download';
+        if (disposition) {
+          const match = disposition.match(/filename="(.+)"/);
+          if (match) fileName = match[1];
+        }
+        const url = window.URL.createObjectURL(new Blob([response.data]));
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', fileName);
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        window.URL.revokeObjectURL(url);
+      });
   },
 
-  // Скачивание файла
-  downloadFile: async (fileName) => {
-    const response = await axios.get(`/files/download/${fileName}`, {
-      responseType: 'blob',
-    });
-    
-    const url = window.URL.createObjectURL(new Blob([response.data]));
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', fileName);
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    window.URL.revokeObjectURL(url);
-  },
+  moveToTrash: (fileId) => axios.post(`/api/files/${fileId}/trash`),
 
-  // Удаление файла
-  deleteFile: (fileName) => {
-    return axios.delete(`/files/${fileName}`);
-  },
+  deleteFile: (fileId) => axios.delete(`/api/files/${fileId}`),
 
-  // Создание папки
-  createFolder: (folderName, parentFolderId = null) => {
-    return axios.post('/folders', { folderName, parentFolderId });
-  },
+  moveFile: (fileId, targetFolderId) =>
+    axios.patch(`/api/files/${fileId}/move`, { parentFolderId: targetFolderId }),
+  
+  createFolder: (folderName, parentFolderId = null) =>
+    axios.post('/api/folders', { folderName, parentFolderId }),
 
-  // Получение информации о хранилище
-  getStorageInfo: () => {
-    return axios.get('/user/storage');
-  },
+  renameFolder: (folderId, folderName) =>
+    axios.patch(`/api/folders/${folderId}`, { folderName }),
 
-  // Поиск файлов
-  searchFiles: (query) => {
-    return axios.get('/files/search', { params: { q: query } });
-  },
+  moveFolder: (folderId, targetFolderId) =>
+    axios.patch(`/api/folders/${folderId}/move`, { parentFolderId: targetFolderId }),
+
+  copyFolder: (folderId, targetFolderId) =>
+    axios.post(`/api/folders/${folderId}/copy`, { parentFolderId: targetFolderId }),
+
+  deleteFolder: (folderId) => axios.delete(`/api/folders/${folderId}`),
+
+  getStorageInfo: () => axios.get('/api/user/storage'),
+
+  searchFiles: (query) => axios.get('/api/files/search', { params: { q: query } }),
+
+  // ============ КОРЗИНА ============
+  getTrash: () => axios.get('/api/trash'),
+
+  restoreFromTrash: (id) => axios.post(`/api/trash/restore/${id}`),
+
+  permanentDelete: (id) => axios.delete(`/api/trash/permanent/${id}`),
+
+  clearTrash: () => axios.delete('/api/trash/clear'),
 };

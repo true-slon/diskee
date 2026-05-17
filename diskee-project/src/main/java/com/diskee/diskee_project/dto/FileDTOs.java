@@ -1,7 +1,8 @@
 package com.diskee.diskee_project.dto;
 
-import lombok.Data;
 import java.time.Instant;
+
+import lombok.Data;
 
 public class FileDTOs {
     
@@ -24,5 +25,9 @@ public class FileDTOs {
     public static class UploadResponse {
         private String message;
         private FileResponse file;
+    }
+    @Data
+    public static class FileMoveRequest {
+        private Long parentFolderId;
     }
 }
