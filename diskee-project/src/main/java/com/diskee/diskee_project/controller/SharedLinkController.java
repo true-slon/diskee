@@ -4,15 +4,21 @@ import com.diskee.diskee_project.api.request.CreateSharedLinkRequest;
 import com.diskee.diskee_project.api.response.SharedLinkInfoResponse;
 import com.diskee.diskee_project.api.response.SharedLinkResponse;
 
+import com.diskee.diskee_project.sdk.data.FileEntity;
+import com.diskee.diskee_project.sdk.data.SharedLinkEntity;
+import com.diskee.diskee_project.sdk.service.FileService;
 import com.diskee.diskee_project.sdk.service.SharedLinkService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springframework.core.io.Resource;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.UUID;
 
 @Tag(name = "Sharing", description = "Публичные ссылки")
@@ -22,6 +28,7 @@ import java.util.UUID;
 public class SharedLinkController {
 
     private final SharedLinkService sharedLinkService;
+    private final FileService fileService;
 
     @PostMapping("/file/{fileId}")
     @ResponseStatus(HttpStatus.CREATED)
@@ -80,5 +87,18 @@ public class SharedLinkController {
     )
     public void delete(@PathVariable UUID linkId) {
         sharedLinkService.delete(linkId);
+    }
+
+    @GetMapping("/my")
+    @SecurityRequirement(name = "bearerAuth")
+    @Operation(
+            summary = "Получить все мои публичные ссылки",
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "Список ссылок"),
+                    @ApiResponse(responseCode = "401", description = "Не авторизован")
+            }
+    )
+    public List<SharedLinkResponse> getMySharedLinks() {
+        return sharedLinkService.getUserSharedLinks();
     }
 }

@@ -35,7 +35,8 @@ public class WebSecurityConfig {
             "/swagger-ui.html",
             "/swagger-ui/**",
             "/v3/api-docs/**",
-            "/app/v4/file/{fileId}"
+            "/app/v4/file/{fileId}",
+            "/app/v4/public/share/**",
     };
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {

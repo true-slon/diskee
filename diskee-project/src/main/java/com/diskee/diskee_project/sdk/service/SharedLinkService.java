@@ -4,6 +4,7 @@ import com.diskee.diskee_project.api.exception.FileNotFoundProblem;
 import com.diskee.diskee_project.api.request.CreateSharedLinkRequest;
 import com.diskee.diskee_project.api.response.SharedLinkInfoResponse;
 import com.diskee.diskee_project.api.response.SharedLinkResponse;
+import com.diskee.diskee_project.sdk.data.DatUserEntity;
 import com.diskee.diskee_project.sdk.data.FileEntity;
 import com.diskee.diskee_project.sdk.data.FolderEntity;
 import com.diskee.diskee_project.sdk.data.SharedLinkEntity;
@@ -15,7 +16,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -110,5 +113,22 @@ public class SharedLinkService {
         response.setDownloadCount(entity.getDownloadCount());
         response.setCreatedAt(entity.getCreatedAt());
         return response;
+    }
+    @Transactional
+    public SharedLinkEntity validateAndGet(String token) {
+        SharedLinkEntity link = sharedLinkRepo.findByToken(token)
+                .orElseThrow(() -> new RuntimeException("Link not found"));
+
+        if (link.getExpiresAt() != null && link.getExpiresAt().isBefore(Instant.now())) {
+            throw new RuntimeException("Link expired");
+        }
+
+        return link;
+    }
+    @Transactional(readOnly = true)
+    public List<SharedLinkResponse> getUserSharedLinks() {
+        DatUserEntity user = currentUserService.getUser();
+        List<SharedLinkEntity> links = sharedLinkRepo.findAllByFileUserOrFolderUser(user, user);
+        return links.stream().map(this::toResponse).collect(Collectors.toList());
     }
 }
