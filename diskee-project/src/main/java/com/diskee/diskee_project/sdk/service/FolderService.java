@@ -5,7 +5,7 @@ import java.util.stream.Collectors;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
+import org.springframework.cache.annotation.Cacheable;   
 import com.diskee.diskee_project.dto.FolderDTOs.FolderRequest;
 import com.diskee.diskee_project.dto.FolderDTOs.FolderResponse;
 import com.diskee.diskee_project.sdk.data.FolderEntity;
@@ -23,30 +23,24 @@ public class FolderService {
     private final CurrentUserService currentUserService;
     private final TrashService trashService;
 
-    // @Cacheable(value = "folder_contents", key = "#parentId != null ? #parentId : 'root'")
-    // @Transactional(readOnly = true)
-    // public List<FolderResponse> getFolders(Long parentId) {
-    //     List<FolderEntity> folders;
-    //     if (parentId == null) {
-    //         folders = folderRepo.findByUserIdAndParentFolderIsNullAndDeletedAtIsNull(
-    //             currentUserService.getUser().getId()
-    //         );
-    //     } else {
-    //         folders = folderRepo.findByParentFolderIdAndDeletedAtIsNull(parentId);
-    //     }
-    //     return folders.stream().map(this::toResponse).collect(Collectors.toList());
-    // }
+    @Cacheable(value = "folder_contents", key = "T(org.springframework.security.core.context.SecurityContextHolder).getContext().getAuthentication().getName() + '-' + (#parentId != null ? #parentId : 'root')")
     @Transactional(readOnly = true)
     public List<FolderResponse> getFolders(Long parentId) {
         List<FolderEntity> folders;
         if (parentId == null) {
-            folders = folderRepo.findAllByParentFolderIsNullAndDeletedAtIsNull();
+            folders = folderRepo.findByUserIdAndParentFolderIsNullAndDeletedAtIsNull(
+                currentUserService.getUser().getId()
+            );
         } else {
-            folders = folderRepo.findByParentFolderIdAndDeletedAtIsNull(parentId);
+            folders = folderRepo.findByParentFolderIdAndUserIdAndDeletedAtIsNull(
+                parentId, currentUserService.getUser().getId()
+            );
         }
         return folders.stream().map(this::toResponse).collect(Collectors.toList());
     }
-    @CacheEvict(value = "folder_contents", allEntries = true)
+
+
+    @CacheEvict(value = "folder_contents", key = "T(org.springframework.security.core.context.SecurityContextHolder).getContext().getAuthentication().getName() + '-root'")
     @Transactional
     public FolderResponse create(FolderRequest request) {
         FolderEntity parent = null;

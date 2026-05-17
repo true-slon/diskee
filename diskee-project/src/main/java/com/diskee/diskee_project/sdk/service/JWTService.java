@@ -19,6 +19,7 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Value;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -38,8 +39,8 @@ public class JWTService {
     private static final TemporalAmount ACCESS_TOKEN_LIFETIME = Duration.ofHours(2);
     private static final TemporalAmount REMEMBER_ME_TOKEN_LIFETIME = Duration.ofDays(30);
 
-    // Минимум 32 символа для HMAC-SHA256
-    private static final String SECRET = "testsecret1234BEBEBEB_PADDING_123";
+    @Value("${jwt.secret}")
+    private String SECRET;
 
     public AuthTokenResponse login(LoginRequest request, String ipAddress, String userAgent) {
         UsernamePasswordAuthenticationToken authToken =
