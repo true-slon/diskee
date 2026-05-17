@@ -12,6 +12,7 @@ const FileItem = ({ file, viewMode, onFolderClick, onFileDeleted, onDeleteToTras
   const [newName, setNewName] = useState('');
   const [isDragOver, setIsDragOver] = useState(false);
   const [showShareDialog, setShowShareDialog] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(null);
   const queryClient = useQueryClient();
 
   if (!file) return null;
@@ -63,13 +64,16 @@ const FileItem = ({ file, viewMode, onFolderClick, onFileDeleted, onDeleteToTras
 
   const handleDelete = () => {
     handleCloseMenu();
-    if (window.confirm(`Переместить "${name}" в корзину?`)) {
-      if (onDeleteToTrash) {
-        onDeleteToTrash();
-      } else {
-        deleteMutation.mutate();
-      }
+    if (onDeleteToTrash) {
+      onDeleteToTrash();
+    } else {
+      setConfirmDelete(name);
     }
+  };
+
+  const confirmDeleteAction = () => {
+    setConfirmDelete(null);
+    deleteMutation.mutate();
   };
 
   const handleRenameStart = () => {
@@ -160,6 +164,39 @@ const FileItem = ({ file, viewMode, onFolderClick, onFileDeleted, onDeleteToTras
             <div className="context-menu-item" style={{ color: 'red' }} onClick={handleDelete}>🗑️ Удалить</div>
           </div>
         </>
+      )}
+
+      {confirmDelete && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(0,0,0,0.5)', display: 'flex',
+          alignItems: 'center', justifyContent: 'center', zIndex: 2000
+        }}>
+          <div style={{
+            background: 'white', borderRadius: 12, padding: 24,
+            maxWidth: 400, textAlign: 'center', boxShadow: '0 4px 20px rgba(0,0,0,0.3)'
+          }}>
+            <div style={{ fontSize: 40, marginBottom: 12 }}>🗑️</div>
+            <h3 style={{ margin: '0 0 8px' }}>Удалить файл?</h3>
+            <p style={{ color: '#666', margin: '0 0 20px' }}>
+              «{confirmDelete}» будет перемещён в корзину.
+            </p>
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
+              <button onClick={() => setConfirmDelete(null)} style={{
+                padding: '10px 24px', borderRadius: 8, border: '1px solid #ccc',
+                background: 'white', cursor: 'pointer'
+              }}>
+                Отмена
+              </button>
+              <button onClick={confirmDeleteAction} style={{
+                padding: '10px 24px', borderRadius: 8, border: 'none',
+                background: '#e53935', color: 'white', cursor: 'pointer'
+              }}>
+                Удалить
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {showShareDialog && (

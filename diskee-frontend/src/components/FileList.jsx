@@ -36,16 +36,6 @@ const FileList = ({ currentFolderId, onFolderClick }) => {
     { onSuccess: () => { refetch(); setShowCreateFolder(false); } }
   );
 
-  const deleteFileMutation = useMutation(
-    (fileId) => fileApi.moveToTrash(fileId),
-    { onSuccess: () => refetch() }
-  );
-
-  const deleteFolderMutation = useMutation(
-    (folderId) => fileApi.deleteFolder(folderId),
-    { onSuccess: () => refetch() }
-  );
-
   if (isLoading) {
     return (
       <div className="loading-container">
@@ -69,7 +59,7 @@ const FileList = ({ currentFolderId, onFolderClick }) => {
   const items = [
     ...(response.folders || []).map(f => ({ ...f, isFolder: true, fileName: f.folderName })),
     ...(response.files || [])
-        .filter(f => !folderIds.has(f.id))  // ← исключить то что уже есть в папках
+        .filter(f => !folderIds.has(f.id))
         .map(f => ({ ...f, isFolder: false }))
   ];
 
@@ -84,18 +74,6 @@ const FileList = ({ currentFolderId, onFolderClick }) => {
     setDragItem(null); 
   };  
   const handleDragEnd = () => setDragItem(null);
-
-  // Обработчик удаления в корзину
-  const handleDelete = (item) => {
-    const name = item.fileName || item.folderName || '';
-    if (window.confirm(`Переместить "${name}" в корзину?`)) {
-      if (item.isFolder) {
-        deleteFolderMutation.mutate(item.id);
-      } else {
-        deleteFileMutation.mutate(item.id);
-      }
-    }
-  };
 
   return (
     <div className="file-manager">
@@ -118,7 +96,6 @@ const FileList = ({ currentFolderId, onFolderClick }) => {
               viewMode={viewMode}
               onFolderClick={onFolderClick}
               onFileDeleted={refetch}
-              onDeleteToTrash={() => handleDelete(file)}
               onDragStart={handleDragStart}
               onDragOver={handleDragOver}
               onDrop={handleDrop}
