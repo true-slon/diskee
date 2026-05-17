@@ -32,7 +32,6 @@ public class TrashService {
     private final FolderRepo folderRepo;
     private final S3Service diskService;
     private final CurrentUserService currentUserService;
-    private final CacheManager cacheManager;                     
     private final CacheInvalidationService cacheInvalidationService;
 
     @Transactional
@@ -68,22 +67,25 @@ public class TrashService {
 
     @Transactional
     public void moveFolderToTrash(Long folderId) {
-        FolderEntity folder = folderRepo.findById(folderId)
-                .orElseThrow(() -> new RuntimeException("Папка не найдена: " + folderId));
-
+        FolderEntity folder =
+                folderRepo.findById(folderId)
+                        .orElseThrow(() ->
+                                new RuntimeException(
+                                        "Папка не найдена: " + folderId
+                                )
+                        );
         folder.setDeletedAt(Instant.now());
         folderRepo.save(folder);
-
-        List<FileEntity> files = fileRepo.findAllByParentFolderIdAndIsDeletedFalse(folderId);
+        List<FileEntity> files =
+                fileRepo.findAllByParentFolderIdAndIsDeletedFalse(folderId);
         for (FileEntity file : files) {
             moveFileToTrash(file.getId());
         }
-
-        List<FolderEntity> subFolders = folderRepo.findAllByParentFolderIdAndDeletedAtIsNull(folderId);
+        List<FolderEntity> subFolders =
+                folderRepo.findAllByParentFolderIdAndDeletedAtIsNull(folderId);
         for (FolderEntity sub : subFolders) {
             moveFolderToTrash(sub.getId());
         }
-
         TrashBinEntity trash = TrashBinEntity.builder()
                 .user(currentUserService.getUser())
                 .folder(folder)
@@ -91,12 +93,12 @@ public class TrashService {
                 .deletedAt(Instant.now())
                 .autoDeleteAt(Instant.now().plus(30, ChronoUnit.DAYS))
                 .build();
-
         trashBinRepo.save(trash);
-
-        cacheInvalidationService.evictFolderContents(folderId);
-
-        log.info("Папка перемещена в корзину: {}", folder.getFolderName());
+        cacheInvalidationService.invalidateFolderTree(folder);
+        log.info(
+                "Папка перемещена в корзину: {}",
+                folder.getFolderName()
+        );
     }
 
     @Transactional(readOnly = true)
@@ -119,38 +121,61 @@ public class TrashService {
             .autoDeleteAt(entity.getAutoDeleteAt())
             .build();
     }
-    
+
     @Transactional
     public void restoreFromTrash(Long trashId) {
-        TrashBinEntity trash = trashBinRepo.findById(trashId).orElseThrow();
+
+        TrashBinEntity trash =
+                trashBinRepo.findById(trashId)
+                        .orElseThrow();
 
         if (trash.getFolder() != null) {
             restoreFolderRecursively(trash.getFolder());
+            cacheInvalidationService.invalidateFolderTree(
+                    trash.getFolder()
+            );
         }
-        if (trash.getFile() != null) {
-            trash.getFile().setDeleted(false);
-            fileRepo.save(trash.getFile());
-        }
-        trashBinRepo.delete(trash);
 
-        Long userId = currentUserService.getUser().getId();
-        Cache cache = cacheManager.getCache("file_folder_contents");
-        if (cache != null) {
-            cache.evict(userId + "-root");
+        if (trash.getFile() != null) {
+            FileEntity file = trash.getFile();
+            file.setDeleted(false);
+            fileRepo.save(file);
+            cacheInvalidationService.evictFileMetadata(
+                    file.getId()
+            );
+            Long parentId =
+                    file.getParentFolder() != null
+                            ? file.getParentFolder().getId()
+                            : null;
+
+            cacheInvalidationService.evictFolderContents(
+                    parentId
+            );
         }
+
+        trashBinRepo.delete(trash);
     }
 
     private void restoreFolderRecursively(FolderEntity folder) {
+
         folder.setDeletedAt(null);
         folderRepo.save(folder);
-        
-        List<FileEntity> files = fileRepo.findAllByParentFolderId(folder.getId());
+
+        Long parentId = folder.getParentFolder() != null
+                ? folder.getParentFolder().getId()
+                : null;
+
+        cacheInvalidationService.evictFolderContents(parentId);
+        cacheInvalidationService.evictFolderContents(folder.getId());
+        List<FileEntity> files =
+                fileRepo.findAllByParentFolderId(folder.getId());
         for (FileEntity file : files) {
             file.setDeleted(false);
             fileRepo.save(file);
+            cacheInvalidationService.evictFileMetadata(file.getId());
         }
-        
-        List<FolderEntity> subs = folderRepo.findAllByParentFolderId(folder.getId());
+        List<FolderEntity> subs =
+                folderRepo.findAllByParentFolderId(folder.getId());
         for (FolderEntity sub : subs) {
             restoreFolderRecursively(sub);
         }
@@ -161,53 +186,69 @@ public class TrashService {
         TrashBinEntity trash = trashBinRepo.findById(trashId)
                 .orElseThrow(() -> new RuntimeException("Запись в корзине не найдена: " + trashId));
 
-        Long fileId = null;
-
         if (trash.getFile() != null) {
             FileEntity file = trash.getFile();
-            fileId = file.getId();
+            Long fileId = file.getId();
+            Long parentId = file.getParentFolder() != null ? file.getParentFolder().getId() : null;
+
             diskService.deleteByKey(file.getStorageObjectKey());
             if (file.getPreviewObjectKey() != null) {
                 diskService.deleteByKey(file.getPreviewObjectKey());
             }
+
             trashBinRepo.delete(trash);
             fileRepo.delete(file);
+
+            cacheInvalidationService.evictFileMetadata(fileId);
+            if (parentId == null) {
+                cacheInvalidationService.evictFolderContentsRoot();
+            } else {
+                cacheInvalidationService.evictFolderContents(parentId);
+            }
             log.info("Файл удалён навсегда: {}", file.getFileName());
         }
 
         if (trash.getFolder() != null) {
+            FolderEntity folder = trash.getFolder();
+            cacheInvalidationService.invalidateFolderTree(folder);
             trashBinRepo.delete(trash);
-            folderRepo.delete(trash.getFolder());
-            log.info("Папка удалена навсегда: {}", trash.getFolder().getFolderName());
+            folderRepo.delete(folder);
+            log.info("Папка удалена навсегда: {}", folder.getFolderName());
         }
-
-        if (fileId != null) {
-            Objects.requireNonNull(cacheManager.getCache("file_metadata")).evict(fileId);
-        }
-        Objects.requireNonNull(cacheManager.getCache("file_folder_contents")).clear();
-        Objects.requireNonNull(cacheManager.getCache("storage_info")).clear();
     }
 
     @Transactional
     public void clearTrash() {
         Long userId = currentUserService.getUser().getId();
         List<TrashBinEntity> allTrash = trashBinRepo.findAllByUserId(userId);
-
         for (TrashBinEntity trash : allTrash) {
             if (trash.getFile() != null) {
-                diskService.deleteByKey(trash.getFile().getStorageObjectKey());
+                FileEntity file = trash.getFile();
+                Long parentId = file.getParentFolder() != null ? file.getParentFolder().getId() : null;
+                diskService.deleteByKey(file.getStorageObjectKey());
+                if (file.getPreviewObjectKey() != null) {
+                    diskService.deleteByKey(file.getPreviewObjectKey());
+                }
+
                 trashBinRepo.delete(trash);
-                fileRepo.delete(trash.getFile());
-            }
-            if (trash.getFolder() != null) {
-                trashBinRepo.delete(trash);
-                folderRepo.delete(trash.getFolder());
+                fileRepo.delete(file);
+
+                cacheInvalidationService.evictFileMetadata(file.getId());
+                if (parentId == null) {
+                    cacheInvalidationService.evictFolderContentsRoot();
+                } else {
+                    cacheInvalidationService.evictFolderContents(parentId);
+                }
             }
         }
-
-        Objects.requireNonNull(cacheManager.getCache("file_metadata")).clear();
-        Objects.requireNonNull(cacheManager.getCache("file_folder_contents")).clear();
-        Objects.requireNonNull(cacheManager.getCache("storage_info")).clear();
+        for (TrashBinEntity trash : allTrash) {
+            if (trash.getFolder() != null) {
+                FolderEntity folder = trash.getFolder();
+                cacheInvalidationService.invalidateFolderTree(folder);
+                trashBinRepo.delete(trash);
+                folderRepo.delete(folder);
+            }
+        }
 
         log.info("Корзина очищена для пользователя {}", userId);
     }
@@ -218,20 +259,28 @@ public class TrashService {
 
         for (TrashBinEntity trash : expired) {
             if (trash.getFile() != null) {
-                diskService.deleteByKey(trash.getFile().getStorageObjectKey());
+                FileEntity file = trash.getFile();
+                Long parentId = file.getParentFolder() != null ? file.getParentFolder().getId() : null;
+                diskService.deleteByKey(file.getStorageObjectKey());
+                if (file.getPreviewObjectKey() != null) {
+                    diskService.deleteByKey(file.getPreviewObjectKey());
+                }
                 trashBinRepo.delete(trash);
-                fileRepo.delete(trash.getFile());
+                fileRepo.delete(file);
+
+                cacheInvalidationService.evictFileMetadata(file.getId());
+                if (parentId == null) {
+                    cacheInvalidationService.evictFolderContentsRoot();
+                } else {
+                    cacheInvalidationService.evictFolderContents(parentId);
+                }
             }
             if (trash.getFolder() != null) {
+                FolderEntity folder = trash.getFolder();
+                cacheInvalidationService.invalidateFolderTree(folder);
                 trashBinRepo.delete(trash);
-                folderRepo.delete(trash.getFolder());
+                folderRepo.delete(folder);
             }
-        }
-
-        if (!expired.isEmpty()) {
-            Objects.requireNonNull(cacheManager.getCache("file_metadata")).clear();
-            Objects.requireNonNull(cacheManager.getCache("file_folder_contents")).clear();
-            Objects.requireNonNull(cacheManager.getCache("storage_info")).clear();
         }
 
         log.info("Автоочистка корзины: удалено {} элементов", expired.size());
