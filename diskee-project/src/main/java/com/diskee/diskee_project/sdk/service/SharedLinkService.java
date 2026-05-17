@@ -10,7 +10,6 @@ import com.diskee.diskee_project.sdk.data.SharedLinkEntity;
 import com.diskee.diskee_project.sdk.data.repo.FileRepo;
 import com.diskee.diskee_project.sdk.data.repo.FolderRepo;
 import com.diskee.diskee_project.sdk.data.repo.SharedLinkRepo;
-import com.diskee.diskee_project.dto.SharedLinkDTOs;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -102,8 +101,8 @@ public class SharedLinkService {
         return UUID.randomUUID().toString().replace("-", "");
     }
 
-    private SharedLinkDTOs.SharedLinkResponse toResponse(SharedLinkEntity entity) {
-        SharedLinkDTOs.SharedLinkResponse response = new SharedLinkDTOs.SharedLinkResponse();
+    private SharedLinkResponse toResponse(SharedLinkEntity entity) {
+        SharedLinkResponse response = new SharedLinkResponse();
         response.setId(entity.getId());
         response.setToken(entity.getToken());
         response.setPermission(entity.getPermission());

@@ -9,5 +9,5 @@ import java.util.Optional;
 import java.util.UUID;
 
 public interface SharedLinkRepo extends JpaRepository<SharedLinkEntity, UUID>, JpaSpecificationExecutor<SharedLinkEntity> {
-    Optional<Object> findByToken(String token);
+    Optional<SharedLinkEntity> findByToken(String token);
 }
