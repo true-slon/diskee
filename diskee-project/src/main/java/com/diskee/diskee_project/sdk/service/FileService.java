@@ -43,7 +43,7 @@ public class FileService {
     // Вспомогательный метод для сброса кэша
     private void evictFolderCache() {
         String key = currentUserService.getUser().getId() + "-root";
-        Cache cache = cacheManager.getCache("file_folder_contents"); 
+        Cache cache = cacheManager.getCache("file_folder_contents");
         if (cache != null) {
             cache.evict(key);
             log.info("CACHE EVICT: {}", key);
