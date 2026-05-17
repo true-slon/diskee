@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
+import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -128,6 +129,12 @@ public class TrashService {
             fileRepo.save(trash.getFile());
         }
         trashBinRepo.delete(trash);
+
+        Long userId = currentUserService.getUser().getId();
+        Cache cache = cacheManager.getCache("file_folder_contents");
+        if (cache != null) {
+            cache.evict(userId + "-root");
+        }
     }
 
     private void restoreFolderRecursively(FolderEntity folder) {
