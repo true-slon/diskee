@@ -71,19 +71,14 @@ public class S3Service {
 
     @SneakyThrows
     public boolean deleteByKey(String key) {
-        try {
-            minioClient.removeObject(
-                    RemoveObjectArgs.builder()
-                            .bucket(bucket)
-                            .object(key)
-                            .build()
-            );
-            log.info("File deleted from MinIO: key={}", key);
-            return true;
-        } catch (Exception e) {
-            log.error("Failed to delete file from MinIO: key={}", key, e);
-            return false;
-        }
+        minioClient.removeObject(
+                RemoveObjectArgs.builder()
+                        .bucket(bucket)
+                        .object(key)
+                        .build()
+        );
+        log.info("File deleted from MinIO: key={}", key);
+        return true;
     }
 
     private String generateKey(String originalFilename) {

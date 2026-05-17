@@ -40,6 +40,9 @@ spring:
       resourceserver:
         jwt:
           client-id: ${API_KEYCLOAK_CLIENT_ID:diskee-core}
+  mvc:
+    problemdetails:
+      enabled: true
   forward-headers-strategy: NATIVE
 logging:
   file:

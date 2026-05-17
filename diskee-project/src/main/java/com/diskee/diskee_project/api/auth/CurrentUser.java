@@ -51,7 +51,7 @@ public class CurrentUser implements UserDetails {
 
     @Override
     public boolean isAccountNonLocked() {
-        return user.getDeletedAt() == null; // если deletedAt не null – считаем аккаунт заблокированным/удалённым
+        return user.getDeletedAt() == null;
     }
 
     @Override
@@ -61,6 +61,6 @@ public class CurrentUser implements UserDetails {
 
     @Override
     public boolean isEnabled() {
-        return user.getDeletedAt() == null; // активен, если не удалён
+        return user.getDeletedAt() == null;
     }
 }
