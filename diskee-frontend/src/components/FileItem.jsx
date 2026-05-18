@@ -159,9 +159,9 @@ const FileItem = ({ file, viewMode, onFolderClick, onFileDeleted, onDeleteToTras
             background: 'white', border: '1px solid #ccc', borderRadius: 4,
             padding: 8, boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
           }}>
-            <div className="context-menu-item" onClick={handleShare}>🔗 Поделиться</div>
-            <div className="context-menu-item" onClick={handleRenameStart}>✏️ Переименовать</div>
-            <div className="context-menu-item" style={{ color: 'red' }} onClick={handleDelete}>🗑️ Удалить</div>
+            <div className="context-menu-item" onClick={handleShare}>Поделиться</div>
+            <div className="context-menu-item" onClick={handleRenameStart}>Переименовать</div>
+            <div className="context-menu-item" style={{ color: 'red' }} onClick={handleDelete}>Удалить</div>
           </div>
         </>
       )}

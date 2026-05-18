@@ -124,7 +124,7 @@ const TrashBin = () => {
             onClick={handleClearAll}
             disabled={actionLoading === 'clear'}
           >
-            {actionLoading === 'clear' ? 'Очистка...' : '🗑️ Очистить всё'}
+            {actionLoading === 'clear' ? 'Очистка...' : 'Очистить всё'}
           </button>
         )}
       </div>
@@ -198,7 +198,7 @@ const TrashBin = () => {
                     disabled={busy}
                     title="Восстановить"
                   >
-                    {isRestoring ? '...' : '↩️ Восстановить'}
+                    {isRestoring ? '...' : 'Восстановить'}
                   </button>
                   <button
                     className="trash-delete-btn"
@@ -206,7 +206,7 @@ const TrashBin = () => {
                     disabled={busy}
                     title="Удалить навсегда"
                   >
-                    {isDeleting ? '...' : '🗑️'}
+                    {isDeleting ? '...' : 'Удалить'}
                   </button>
                 </div>
               </div>

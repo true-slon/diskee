@@ -722,7 +722,7 @@ body {
 
 .create-folder-btn {
   padding: 8px 16px;
-  background: #007bff;
+  background: var(--primary-color);
   color: white;
   border: none;
   border-radius: 6px;
@@ -731,7 +731,7 @@ body {
 }
 
 .create-folder-btn:hover {
-  background: #0056b3;
+  background: var(--primary-hover);
 }
 
 .view-btns {
@@ -841,8 +841,8 @@ body {
 }
 
 .permission-badge {
-  background: #e8f4fd;
-  color: #1a6fa8;
+  background: #eef2ff;
+  color: var(--primary-color);
 }
 
 .expired-badge {
@@ -926,7 +926,7 @@ body {
   border-radius: 6px;
   background: transparent;
   cursor: pointer;
-  font-size: 15px;
+  font-size: 13px;
   transition: background 0.15s;
 }
 
@@ -1018,7 +1018,7 @@ body {
   display: block;
   font-size: 13px;
   font-weight: 500;
-  color: #555;
+  color: #111827;
   margin-bottom: 10px;
 }
 
@@ -1050,7 +1050,7 @@ body {
 }
 
 .radio-option.active {
-  border-color: #3498db;
+  border-color: var(--primary-color);
   background: #f0f7ff;
 }
 
@@ -1087,9 +1087,9 @@ body {
 }
 
 .expiry-btn.active {
-  border-color: #3498db;
+  border-color: var(--primary-color);
   background: #e8f4fd;
-  color: #1a6fa8;
+  color: var(--primary-color);
   font-weight: 500;
 }
 
@@ -1150,7 +1150,7 @@ body {
 /* ============ BUTTONS ============ */
 
 .btn-primary {
-  background: #3498db;
+  background: var(--primary-color);
   color: #fff;
   border: none;
   padding: 8px 20px;
@@ -1162,7 +1162,7 @@ body {
 }
 
 .btn-primary:hover {
-  background: #2980b9;
+  background: var(--primary-hover);
 }
 
 .btn-primary:disabled {
@@ -1392,7 +1392,7 @@ body {
   border: 1px solid #e0e0e0;
   border-radius: 6px;
   background: transparent;
-  font-size: 15px;
+  font-size: 13px;
   cursor: pointer;
   transition: background 0.15s;
 }

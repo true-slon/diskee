@@ -78,10 +78,10 @@ const FileList = ({ currentFolderId, onFolderClick }) => {
   return (
     <div className="file-manager">
       <div className="view-controls">
-        <button className="create-folder-btn" onClick={() => setShowCreateFolder(true)}>📁 Создать папку </button>
+        <button className="create-folder-btn" onClick={() => setShowCreateFolder(true)}> Создать папку </button>
         <div className="view-btns">
-          <button className={`view-btn ${viewMode === 'grid' ? 'active' : ''}`} onClick={() => setViewMode('grid')}>📱 Сетка</button>
-          <button className={`view-btn ${viewMode === 'list' ? 'active' : ''}`} onClick={() => setViewMode('list')}>📋 Список</button>
+          <button className={`view-btn ${viewMode === 'grid' ? 'active' : ''}`} onClick={() => setViewMode('grid')}>Сетка</button>
+          <button className={`view-btn ${viewMode === 'list' ? 'active' : ''}`} onClick={() => setViewMode('list')}>Список</button>
         </div>
       </div>
 

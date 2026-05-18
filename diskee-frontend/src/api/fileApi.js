@@ -61,20 +61,4 @@ export const fileApi = {
   permanentDelete: (id) => axios.delete(`/api/trash/permanent/${id}`),
   clearTrash: () => axios.delete('/api/trash/clear'),
 
-  // ============ ОБЩИЕ ССЫЛКИ ============
-  createForFile: (fileId, request) =>
-    axios.post(`/app/v4/share/file/${fileId}`, request),
- 
-  createForFolder: (folderId, request) =>
-    axios.post(`/app/v4/share/folder/${folderId}`, request),
- 
-  resolve: (token) =>
-    axios.get(`/app/v4/share/${token}`),
- 
-  deleteLink: (linkId) =>
-    axios.delete(`/app/v4/share/${linkId}`),
- 
-  getMyLinks: () =>
-    axios.get('/app/v4/share/my'),
-
 };

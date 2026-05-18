@@ -32,11 +32,11 @@ const Dashboard = () => {
   };
 
   const navItems = [
-    { id: 'files',   label: '📁 Мои файлы' },
-    { id: 'recent',  label: '🕒 Недавние' },
-    { id: 'starred', label: '⭐ Избранное' },
-    { id: 'trash',   label: '🗑️ Корзина' },
-    { id: 'shared',  label: '🔗 Общие ссылки' },
+    { id: 'files',   label: 'Мои файлы' },
+    { id: 'recent',  label: 'Недавние' },
+    { id: 'starred', label: 'Избранное' },
+    { id: 'trash',   label: 'Корзина' },
+    { id: 'shared',  label: 'Общие ссылки' },
   ];
 
   return (
@@ -81,10 +81,10 @@ const Dashboard = () => {
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
                 {currentFolderId && (
                   <button onClick={handleBack} style={{ padding: '6px 12px', cursor: 'pointer' }}>
-                    ⬅️ Назад
+                    Назад
                   </button>
                 )}
-                <Breadcrumbs path={[]} onNavigate={handleNavigate} />
+                {/* <Breadcrumbs path={[]} onNavigate={handleNavigate} /> */}
               </div>
               <FileUploader currentFolderId={currentFolderId} />
               <FileList

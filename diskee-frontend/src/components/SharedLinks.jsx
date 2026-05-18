@@ -81,7 +81,7 @@ const SharedLinks = () => {
   return (
     <div className="shared-links-page">
       <div className="shared-links-header">
-        <h2>🔗 Общие ссылки</h2>
+        <h2>Общие ссылки</h2>
         <p className="shared-links-subtitle">
           Ссылки, которые вы создали для файлов и папок
         </p>
@@ -104,9 +104,9 @@ const SharedLinks = () => {
               >
                 <div className="shared-link-info">
                   <div className="shared-link-name">
-                    <span className="shared-link-type-icon">
+                    {/* <span className="shared-link-type-icon">
                       {getTypeIcon(link.type)}
-                    </span>
+                    </span> */}
                     <span className="shared-link-filename">
                       {link.name || 'Без названия'}
                     </span>
@@ -154,7 +154,7 @@ const SharedLinks = () => {
                     onClick={() => handleCopy(link.token)}
                     title="Скопировать ссылку"
                   >
-                    {copiedId === link.token ? '✅ Скопировано' : '📋 Копировать'}
+                    {copiedId === link.token ? 'Скопировано' : 'Копировать'}
                   </button>
                   <button
                     className="shared-link-delete-btn"
@@ -162,7 +162,7 @@ const SharedLinks = () => {
                     title="Удалить ссылку"
                     disabled={deleteMutation.isLoading}
                   >
-                    🗑️
+                    Удалить
                   </button>
                 </div>
               </div>

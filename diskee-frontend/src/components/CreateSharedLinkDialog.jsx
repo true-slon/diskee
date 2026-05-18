@@ -74,7 +74,7 @@ export function CreateSharedLinkDialog({ item, open, onClose }) {
         onClick={(e) => e.stopPropagation()}
       >
         <div className="modal-title-row">
-          <h3>🔗 Поделиться</h3>
+          <h3>Поделиться</h3>
           <button className="modal-close-btn" onClick={handleClose}>✕</button>
         </div>
 
@@ -96,7 +96,7 @@ export function CreateSharedLinkDialog({ item, open, onClose }) {
                     checked={permission === 'view'}
                     onChange={() => setPermission('view')}
                   />
-                  <span className="radio-label">👁️ Просмотр</span>
+                  <span className="radio-label"> Просмотр</span>
                   <span className="radio-desc">Только чтение и скачивание</span>
                 </label>
                 <label className={`radio-option ${permission === 'edit' ? 'active' : ''}`}>
@@ -107,7 +107,7 @@ export function CreateSharedLinkDialog({ item, open, onClose }) {
                     checked={permission === 'edit'}
                     onChange={() => setPermission('edit')}
                   />
-                  <span className="radio-label">✏️ Редактирование</span>
+                  <span className="radio-label"> Редактирование</span>
                   <span className="radio-desc">Изменение файлов и папок</span>
                 </label>
               </div>
@@ -154,7 +154,7 @@ export function CreateSharedLinkDialog({ item, open, onClose }) {
               >
                 {createMutation.isLoading ? 'Создание...' : 'Создать ссылку'}
               </button>
-              <button type="button" onClick={handleClose}>Отмена</button>
+              <button style={{ margin: '8px' }} type="button" onClick={handleClose} className="btn-primary">Отмена</button>
             </div>
           </>
         ) : (
@@ -173,7 +173,6 @@ export function CreateSharedLinkDialog({ item, open, onClose }) {
                 className={`shared-link-copy-btn ${copied ? 'copied' : ''}`}
                 onClick={handleCopy}
               >
-                {copied ? '✅' : '📋'}
               </button>
             </div>
 
