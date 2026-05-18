@@ -7,7 +7,6 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import org.apache.tika.Tika;
-import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;   
 import org.springframework.core.io.Resource;
 import org.springframework.data.jpa.domain.Specification;
@@ -18,8 +17,10 @@ import org.springframework.web.multipart.MultipartFile;
 import com.diskee.diskee_project.api.exception.FileNotFoundProblem;
 import com.diskee.diskee_project.api.request.UploadedFile;
 import com.diskee.diskee_project.dto.FileDTOs;
+import com.diskee.diskee_project.sdk.data.DatUserEntity;
 import com.diskee.diskee_project.sdk.data.FileEntity;
 import com.diskee.diskee_project.sdk.data.FolderEntity;
+import com.diskee.diskee_project.sdk.data.repo.DatUserRepo;
 import com.diskee.diskee_project.sdk.data.repo.FileRepo;
 import com.diskee.diskee_project.sdk.data.repo.FolderRepo;
 import com.diskee.diskee_project.sdk.data.spec.FileSpecification;
@@ -28,17 +29,6 @@ import com.diskee.diskee_project.utils.EntityUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.tika.Tika;
-import org.springframework.core.io.Resource;
-import org.springframework.data.jpa.domain.Specification;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.multipart.MultipartFile;
-
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.Collection;
-import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -49,6 +39,7 @@ public class FileService {
     private final CurrentUserService currentUserService;
     private final FolderRepo folderRepo;
     private final CacheInvalidationService cacheInvalidationService;
+    private final DatUserRepo userRepo;
 
     @Transactional(readOnly = true)
     public FileEntity findById(Long id) {
@@ -96,6 +87,9 @@ public class FileService {
         } else {
             cacheInvalidationService.evictFolderContents(parentId);
         }
+        DatUserEntity user = currentUserService.getUser();
+        user.setStorageUsedBytes(user.getStorageUsedBytes() + fileEntity.getFileSizeBytes());
+        userRepo.save(user);
         return fileEntity;
     }
 

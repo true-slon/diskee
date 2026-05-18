@@ -3,18 +3,17 @@ package com.diskee.diskee_project.sdk.service;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
-import java.util.Objects;
 import java.util.stream.Collectors;
 
-import org.springframework.cache.Cache;
-import org.springframework.cache.CacheManager;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.diskee.diskee_project.dto.TrashItemDTO;
+import com.diskee.diskee_project.sdk.data.DatUserEntity;
 import com.diskee.diskee_project.sdk.data.FileEntity;
 import com.diskee.diskee_project.sdk.data.FolderEntity;
 import com.diskee.diskee_project.sdk.data.TrashBinEntity;
+import com.diskee.diskee_project.sdk.data.repo.DatUserRepo;
 import com.diskee.diskee_project.sdk.data.repo.FileRepo;
 import com.diskee.diskee_project.sdk.data.repo.FolderRepo;
 import com.diskee.diskee_project.sdk.data.repo.TrashBinRepo;
@@ -33,6 +32,7 @@ public class TrashService {
     private final S3Service diskService;
     private final CurrentUserService currentUserService;
     private final CacheInvalidationService cacheInvalidationService;
+    private final DatUserRepo userRepo;
 
     @Transactional
     public TrashBinEntity moveFileToTrash(Long fileId) {
@@ -190,15 +190,17 @@ public class TrashService {
             FileEntity file = trash.getFile();
             Long fileId = file.getId();
             Long parentId = file.getParentFolder() != null ? file.getParentFolder().getId() : null;
-
+            long fileSize = file.getFileSizeBytes();
             diskService.deleteByKey(file.getStorageObjectKey());
             if (file.getPreviewObjectKey() != null) {
                 diskService.deleteByKey(file.getPreviewObjectKey());
             }
-
+            
             trashBinRepo.delete(trash);
             fileRepo.delete(file);
-
+            DatUserEntity user = currentUserService.getUser();
+            user.setStorageUsedBytes(user.getStorageUsedBytes() - fileSize);
+            userRepo.save(user);
             cacheInvalidationService.evictFileMetadata(fileId);
             if (parentId == null) {
                 cacheInvalidationService.evictFolderContentsRoot();
@@ -221,15 +223,17 @@ public class TrashService {
     public void clearTrash() {
         Long userId = currentUserService.getUser().getId();
         List<TrashBinEntity> allTrash = trashBinRepo.findAllByUserId(userId);
+        long totalFreed = 0;
         for (TrashBinEntity trash : allTrash) {
             if (trash.getFile() != null) {
                 FileEntity file = trash.getFile();
                 Long parentId = file.getParentFolder() != null ? file.getParentFolder().getId() : null;
+                totalFreed += file.getFileSizeBytes();
                 diskService.deleteByKey(file.getStorageObjectKey());
                 if (file.getPreviewObjectKey() != null) {
                     diskService.deleteByKey(file.getPreviewObjectKey());
                 }
-
+                
                 trashBinRepo.delete(trash);
                 fileRepo.delete(file);
 
@@ -249,18 +253,23 @@ public class TrashService {
                 folderRepo.delete(folder);
             }
         }
-
+        if (totalFreed > 0) {
+            DatUserEntity user = currentUserService.getUser();
+            user.setStorageUsedBytes(user.getStorageUsedBytes() - totalFreed);
+            userRepo.save(user);
+        }
         log.info("Корзина очищена для пользователя {}", userId);
     }
 
     @Transactional
     public void autoCleanExpired() {
         List<TrashBinEntity> expired = trashBinRepo.findAllByAutoDeleteAtBefore(Instant.now());
-
+        long totalFreed = 0;
         for (TrashBinEntity trash : expired) {
             if (trash.getFile() != null) {
                 FileEntity file = trash.getFile();
                 Long parentId = file.getParentFolder() != null ? file.getParentFolder().getId() : null;
+                totalFreed += file.getFileSizeBytes();
                 diskService.deleteByKey(file.getStorageObjectKey());
                 if (file.getPreviewObjectKey() != null) {
                     diskService.deleteByKey(file.getPreviewObjectKey());
@@ -281,6 +290,11 @@ public class TrashService {
                 trashBinRepo.delete(trash);
                 folderRepo.delete(folder);
             }
+        }
+        if (totalFreed > 0) {
+            DatUserEntity user = currentUserService.getUser();
+            user.setStorageUsedBytes(user.getStorageUsedBytes() - totalFreed);
+            userRepo.save(user);
         }
 
         log.info("Автоочистка корзины: удалено {} элементов", expired.size());
