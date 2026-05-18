@@ -17,6 +17,16 @@ export const fileApi = {
     });
   },
 
+
+  searchFiles: (query, folderId, category) => {
+    const params = {};
+    if (query) params.q = query;
+    if (folderId) params.folderId = folderId;
+    if (category) params.category = category;
+    return axios.get('/api/files/search', { params });
+  },
+
+
   downloadFile: (fileId, fileName) => {
     return axios.get(`/api/files/${fileId}`, { responseType: 'blob' })
       .then(response => {
@@ -49,7 +59,6 @@ export const fileApi = {
       return axios.get(`/api/folders/${folderId}/download`, { responseType: 'blob' });
   },
   getStorageInfo: () => axios.get('/api/user/storage'),
-  searchFiles: (query) => axios.get('/api/files/search', { params: { q: query } }),
 
   // ============ КОРЗИНА ============
   getTrash: () => axios.get('/api/trash'),

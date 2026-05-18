@@ -93,6 +93,41 @@ public class FileService {
         return fileEntity;
     }
 
+    public List<FileDTOs.FileResponse> searchFiles(Long userId, String query, Long folderId, String category) {
+        List<FileEntity> results;
+        List<String> extensions = category != null ? getExtensionsForCategory(category) : null;
+        boolean hasQuery = query != null && !query.trim().isEmpty();
+
+        if (hasQuery && folderId != null && extensions != null) {
+            results = fileRepository.searchInFolderByCategory(userId, folderId, query, extensions);
+        } else if (hasQuery && folderId != null) {
+            results = fileRepository.searchInFolder(userId, folderId, query);
+        } else if (hasQuery && extensions != null) {
+            results = fileRepository.searchByCategory(userId, query, extensions);
+        } else if (hasQuery) {
+            results = fileRepository.searchByName(userId, query);
+        } else if (folderId != null && extensions != null) {
+            results = fileRepository.findAllByCategoryInFolder(userId, folderId, extensions);
+        } else if (extensions != null) {
+            results = fileRepository.findAllByCategory(userId, extensions);
+        } else {
+            results = List.of();
+        }
+
+        return results.stream().map(this::toFileResponse).collect(Collectors.toList());
+    }
+
+    private List<String> getExtensionsForCategory(String category) {
+        return switch (category) {
+            case "image" -> List.of("jpg", "jpeg", "png", "gif", "webp", "bmp", "svg");
+            case "video" -> List.of("mp4", "mov", "webm", "avi", "mkv");
+            case "audio" -> List.of("mp3", "wav", "ogg", "flac", "aac");
+            case "document" -> List.of("pdf", "docx", "xlsx", "pptx", "txt", "csv");
+            case "archive" -> List.of("zip", "rar", "7z", "tar", "gz");
+            default -> List.of(category);
+        };
+    }
+    
     @Transactional
     public void delete(Long fileId) {
         FileEntity file = fileRepository.findById(fileId).orElse(null);

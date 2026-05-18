@@ -2,6 +2,7 @@ package com.diskee.diskee_project.controller;
 
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.Map;
 
 import org.springframework.core.io.Resource;
@@ -22,6 +23,7 @@ import org.springframework.web.multipart.MultipartFile;
 import com.diskee.diskee_project.dto.FileDTOs;
 import com.diskee.diskee_project.sdk.data.FileEntity;
 import com.diskee.diskee_project.sdk.data.TrashBinEntity;
+import com.diskee.diskee_project.sdk.service.CurrentUserService;
 import com.diskee.diskee_project.sdk.service.FileService;
 import com.diskee.diskee_project.sdk.service.TrashService;
 
@@ -34,7 +36,8 @@ public class FileController {
 
     private final FileService fileService;
     private final TrashService trashService;
-
+    private final CurrentUserService currentUserService;
+    
     // @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     // public ResponseEntity<FileEntity> upload(@RequestParam("file") MultipartFile file) {
     //     FileEntity saved = fileService.create(file);
@@ -45,6 +48,17 @@ public class FileController {
         FileEntity saved = fileService.create(file, parentId);
         return ResponseEntity.ok(fileService.toFileResponse(saved));  
     }
+
+    @GetMapping("/search")
+    public ResponseEntity<List<FileDTOs.FileResponse>> search(
+            @RequestParam(required = false) String q,
+            @RequestParam(required = false) Long folderId,
+            @RequestParam(required = false) String category) {
+        Long userId = currentUserService.getUser().getId();
+        return ResponseEntity.ok(fileService.searchFiles(userId, q, folderId, category));
+    }
+
+
     @GetMapping("/{fileId}")
     public ResponseEntity<Resource> download(@PathVariable Long fileId) {
         FileEntity fileEntity = fileService.findById(fileId, true);

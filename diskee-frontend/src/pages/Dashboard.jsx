@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import FileUploader from '../components/FileUploader';
 import FileList from '../components/FileList';
@@ -6,6 +6,7 @@ import StorageInfo from '../components/StorageInfo';
 import Breadcrumbs from '../components/Breadcrumbs';
 import SharedLinks from '../components/SharedLinks';
 import TrashBin from '../components/TrashBin';
+import { fileApi } from '../api/fileApi';
 
 const Dashboard = () => {
   const { user, logout } = useAuth();
@@ -13,14 +14,22 @@ const Dashboard = () => {
   const [folderStack, setFolderStack] = useState([]);
   const [activeSection, setActiveSection] = useState('files');
 
+  // Поиск
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchCategory, setSearchCategory] = useState('');
+  const [searchInCurrentFolder, setSearchInCurrentFolder] = useState(false);
+  const [searchResults, setSearchResults] = useState(null);
+
   const handleFolderClick = (folderId) => {
     setFolderStack([...folderStack, currentFolderId]);
     setCurrentFolderId(folderId);
+    setSearchResults(null);
   };
 
   const handleNavigate = (folderId) => {
     setCurrentFolderId(folderId);
     if (folderId === null) setFolderStack([]);
+    setSearchResults(null);
   };
 
   const handleBack = () => {
@@ -30,6 +39,25 @@ const Dashboard = () => {
       setCurrentFolderId(prevFolder);
     }
   };
+
+  const handleSearch = async () => {
+    if (!searchQuery.trim() && !searchCategory) {
+      setSearchResults(null);
+      return;
+    }
+    const folderId = searchInCurrentFolder ? currentFolderId : null;
+    const res = await fileApi.searchFiles(searchQuery, folderId, searchCategory);
+    setSearchResults(res.data);
+  };
+
+  useEffect(() => {
+    if (searchQuery.length >= 2 || searchCategory) {
+      const timer = setTimeout(handleSearch, 300);
+      return () => clearTimeout(timer);
+    } else {
+      setSearchResults(null);
+    }
+  }, [searchQuery, searchCategory, searchInCurrentFolder]);
 
   const navItems = [
     { id: 'files',   label: 'Мои файлы' },
@@ -78,13 +106,114 @@ const Dashboard = () => {
           {activeSection === 'trash'  && <TrashBin />}
           {activeSection === 'files'  && (
             <>
+              <div style={{ marginBottom: 16, padding: 12, background: '#f5f5f5', borderRadius: 12 }}>
+                <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Поиск файлов..."
+                    style={{
+                      flex: 1, padding: '10px 14px', borderRadius: 8,
+                      border: '1px solid #ddd', fontSize: 14, outline: 'none'
+                    }}
+                  />
+                  <select
+                     value={searchCategory}
+                     onChange={(e) => {
+                        setSearchCategory(e.target.value);
+                        const folderId = searchInCurrentFolder ? currentFolderId : null;
+                        fileApi.searchFiles(searchQuery, folderId, e.target.value).then(res => {
+                            setSearchResults(res.data);
+                        });
+                    }}
+                    style={{
+                      padding: '10px 12px', borderRadius: 8,
+                      border: '1px solid #ddd', fontSize: 14, background: 'white'
+                    }}
+                  >
+                    <option value="">Все типы</option>
+                    <option value="image">Изображения</option>
+                    <option value="video">Видео</option>
+                    <option value="audio">Аудио</option>
+                    <option value="document">Документы</option>
+                    <option value="archive">Архивы</option>
+                  </select>
+                </div>
+                <label style={{ fontSize: 13, color: '#666', display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <input
+                      type="checkbox"
+                      checked={searchInCurrentFolder}
+                      onChange={(e) => {
+                          setSearchInCurrentFolder(e.target.checked);
+                          const folderId = e.target.checked ? currentFolderId : null;
+                          fileApi.searchFiles(searchQuery, folderId, searchCategory).then(res => {
+                              setSearchResults(res.data);
+                          });
+                      }}
+                  />
+                  Искать только в текущей папке
+                </label>
+              </div>
+
+              {searchResults && (
+                <div style={{ marginBottom: 16, padding: 12, background: '#fff', borderRadius: 12, border: '1px solid #e0e0e0' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                    <strong>Результаты поиска ({searchResults.length})</strong>
+                    <button onClick={() => { setSearchResults(null); setSearchQuery(''); setSearchCategory(''); }}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#999' }}>
+                      ✕ Закрыть
+                    </button>
+                  </div>
+                  {searchResults.length === 0 ? (
+                    <p style={{ color: '#999', textAlign: 'center', padding: 20 }}>Ничего не найдено</p>
+                  ) : (
+                    searchResults.map((file) => (
+                      <div key={file.id}
+                        style={{
+                          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                          padding: '8px 12px', borderRadius: 8, marginBottom: 4,
+                          background: '#f9f9f9', cursor: 'pointer'
+                        }}
+                        onClick={() => {
+                          if (file.parentFolderId) {
+                            setFolderStack([...folderStack, currentFolderId]);
+                            handleNavigate(file.parentFolderId);
+                          }
+                        }}
+                      >
+                        <div>
+                          <span style={{ fontWeight: 500 }}>{file.fileName}</span>
+                          <span style={{ color: '#999', fontSize: 12, marginLeft: 8 }}>
+                            {file.fileExtension?.toUpperCase()}
+                          </span>
+                        </div>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setFolderStack([...folderStack, currentFolderId]);
+                            handleNavigate(file.parentFolderId);
+                            setSearchResults(null);
+                          }}
+                          style={{
+                            padding: '4px 10px', borderRadius: 6, border: '1px solid #ddd',
+                            background: 'white', cursor: 'pointer', fontSize: 12
+                          }}
+                        >
+                          Перейти в папку
+                        </button>
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
+
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
                 {currentFolderId && (
                   <button onClick={handleBack} style={{ padding: '6px 12px', cursor: 'pointer' }}>
                     Назад
                   </button>
                 )}
-                {/* <Breadcrumbs path={[]} onNavigate={handleNavigate} /> */}
               </div>
               <FileUploader currentFolderId={currentFolderId} />
               <FileList
