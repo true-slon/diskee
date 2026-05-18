@@ -11,6 +11,8 @@ const FileUploader = ({ currentFolderId }) => {
     {
       onSuccess: () => {
         queryClient.invalidateQueries(['files', currentFolderId]);
+        queryClient.invalidateQueries('storage');  // ← добавить эту строку
+
       },
     }
   );

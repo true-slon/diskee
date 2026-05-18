@@ -94,6 +94,7 @@ const TrashBin = () => {
     } finally {
       setActionLoading(null);
     }
+    
   };
 
   const handleClearAll = async () => {
@@ -107,6 +108,7 @@ const TrashBin = () => {
     } finally {
       setActionLoading(null);
     }
+  
   };
 
   return (
