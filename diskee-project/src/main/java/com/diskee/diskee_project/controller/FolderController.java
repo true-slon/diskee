@@ -13,7 +13,9 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-
+import org.springframework.core.io.Resource;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import com.diskee.diskee_project.dto.FileDTOs.FileResponse;
 import com.diskee.diskee_project.dto.FolderDTOs.FolderContentsResponse;
 import com.diskee.diskee_project.dto.FolderDTOs.FolderRequest;
@@ -69,6 +71,19 @@ public class FolderController {
         return ResponseEntity.ok(folder);
     }
 
+
+    @GetMapping("/{folderId}/download")
+    public ResponseEntity<Resource> downloadFolder(@PathVariable Long folderId) {
+        Resource zip = folderService.downloadAsZip(folderId);
+        String folderName = folderService.getFolderName(folderId);
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType("application/zip"))
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=\"" + folderName + ".zip\"")
+                .body(zip);
+    }
+
+    
     @DeleteMapping("/{folderId}")
     public ResponseEntity<Void> delete(@PathVariable Long folderId) {
         folderService.delete(folderId);

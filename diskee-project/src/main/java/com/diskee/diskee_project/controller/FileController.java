@@ -1,5 +1,7 @@
 package com.diskee.diskee_project.controller;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
 import org.springframework.core.io.Resource;
@@ -47,10 +49,21 @@ public class FileController {
     public ResponseEntity<Resource> download(@PathVariable Long fileId) {
         FileEntity fileEntity = fileService.findById(fileId, true);
         Resource resource = fileService.getFileByKey(fileEntity.getStorageObjectKey());
+        
+        MediaType mediaType;
+        try {
+            mediaType = MediaType.parseMediaType(fileEntity.getMimeType());
+        } catch (Exception e) {
+            mediaType = MediaType.APPLICATION_OCTET_STREAM;
+        }
+        
+        String encodedFileName = URLEncoder.encode(fileEntity.getFileName(), StandardCharsets.UTF_8)
+                .replace("+", "%20");
+        
         return ResponseEntity.ok()
-                .contentType(MediaType.parseMediaType(fileEntity.getMimeType()))
+                .contentType(mediaType)
                 .header(HttpHeaders.CONTENT_DISPOSITION,
-                        "attachment; filename=\"" + fileEntity.getFileName() + "\"")
+                        "attachment; filename*=UTF-8''" + encodedFileName)
                 .body(resource);
     }
 

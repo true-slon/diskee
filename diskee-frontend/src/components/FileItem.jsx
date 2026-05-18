@@ -70,15 +70,36 @@ const FileItem = ({ file, viewMode, onFolderClick, onFileDeleted, onDeleteToTras
       setConfirmDelete(name);
     }
   };
+  // const handleDownload = () => {
+  //     handleCloseMenu();
+  //     fileApi.downloadFile(file.id);
+  // };
   const handleDownload = () => {
-      handleCloseMenu();
-      fileApi.downloadFile(file.id);
-  };
+    handleCloseMenu();
+    const ext = file.fileExtension ? '.' + file.fileExtension : '';
+    const fullName = (file.fileName || 'download') + (file.isFolder ? '' : '');
+    fileApi.downloadFile(file.id, file.fileName);
+};
   const confirmDeleteAction = () => {
     setConfirmDelete(null);
     deleteMutation.mutate();
   };
-
+  const handleDownloadFolder = async () => {
+      handleCloseMenu();
+      try {
+          const response = await fileApi.downloadFolder(file.id);
+          const url = window.URL.createObjectURL(response.data);
+          const link = document.createElement('a');
+          link.href = url;
+          link.setAttribute('download', `${name}.zip`);
+          document.body.appendChild(link);
+          link.click();
+          link.remove();
+          window.URL.revokeObjectURL(url);
+      } catch {
+          alert('Ошибка при скачивании папки');
+      }
+  };
   const handleRenameStart = () => {
     handleCloseMenu();
     const dotIndex = file.isFolder ? -1 : name.lastIndexOf('.');
@@ -155,19 +176,20 @@ const FileItem = ({ file, viewMode, onFolderClick, onFileDeleted, onDeleteToTras
       </div>
 
       {contextMenu && (
-        <>
+      <>
           <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 998 }} onClick={handleCloseMenu} />
           <div style={{
-            position: 'fixed', left: contextMenu.x, top: contextMenu.y, zIndex: 999,
-            background: 'white', border: '1px solid #ccc', borderRadius: 4,
-            padding: 8, boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
+              position: 'fixed', left: contextMenu.x, top: contextMenu.y, zIndex: 999,
+              background: 'white', border: '1px solid #ccc', borderRadius: 4,
+              padding: 8, boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
           }}>
-            <div className="context-menu-item" onClick={handleDownload}>⬇️ Скачать</div>
-            <div className="context-menu-item" onClick={handleShare}>Поделиться</div>
-            <div className="context-menu-item" onClick={handleRenameStart}>Переименовать</div>
-            <div className="context-menu-item" style={{ color: 'red' }} onClick={handleDelete}>Удалить</div>
+              {!file.isFolder && <div className="context-menu-item" onClick={handleDownload}>Скачать</div>}
+              {file.isFolder && <div className="context-menu-item" onClick={handleDownloadFolder}>Скачать ZIP</div>}
+              <div className="context-menu-item" onClick={handleShare}>Поделиться</div>
+              <div className="context-menu-item" onClick={handleRenameStart}>Переименовать</div>
+              <div className="context-menu-item" style={{ color: 'red' }} onClick={handleDelete}>Удалить</div>
           </div>
-        </>
+      </>
       )}
 
       {confirmDelete && (

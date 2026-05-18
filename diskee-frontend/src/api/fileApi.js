@@ -17,15 +17,9 @@ export const fileApi = {
     });
   },
 
-  downloadFile: (fileId) => {
+  downloadFile: (fileId, fileName) => {
     return axios.get(`/api/files/${fileId}`, { responseType: 'blob' })
       .then(response => {
-        const disposition = response.headers['content-disposition'];
-        let fileName = 'download';
-        if (disposition) {
-          const match = disposition.match(/filename="(.+)"/);
-          if (match) fileName = match[1];
-        }
         const url = window.URL.createObjectURL(new Blob([response.data]));
         const link = document.createElement('a');
         link.href = url;
@@ -51,7 +45,9 @@ export const fileApi = {
   copyFolder: (folderId, targetFolderId) =>
     axios.post(`/api/folders/${folderId}/copy`, { parentFolderId: targetFolderId }),
   deleteFolder: (folderId) => axios.delete(`/api/folders/${folderId}`),
-
+  downloadFolder: (folderId) => {
+      return axios.get(`/api/folders/${folderId}/download`, { responseType: 'blob' });
+  },
   getStorageInfo: () => axios.get('/api/user/storage'),
   searchFiles: (query) => axios.get('/api/files/search', { params: { q: query } }),
 

@@ -1,17 +1,25 @@
 package com.diskee.diskee_project.sdk.service;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.util.List;
 import java.util.stream.Collectors;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 
-import com.diskee.diskee_project.dto.FileDTOs;
-import com.diskee.diskee_project.dto.FolderDTOs;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.diskee.diskee_project.dto.FileDTOs;
+import com.diskee.diskee_project.dto.FolderDTOs;
 import com.diskee.diskee_project.dto.FolderDTOs.FolderRequest;
 import com.diskee.diskee_project.dto.FolderDTOs.FolderResponse;
+import com.diskee.diskee_project.sdk.data.FileEntity;
 import com.diskee.diskee_project.sdk.data.FolderEntity;
+import com.diskee.diskee_project.sdk.data.repo.FileRepo;
 import com.diskee.diskee_project.sdk.data.repo.FolderRepo;
 
 import lombok.RequiredArgsConstructor;
@@ -27,8 +35,12 @@ public class FolderService {
     private final TrashService trashService;
     private final CacheInvalidationService cacheInvalidationService;
     private final FileService fileService;
-
-
+    private final FileRepo fileRepo;
+    public String getFolderName(Long folderId) {
+        return folderRepo.findById(folderId)
+                .map(FolderEntity::getFolderName)
+                .orElse("folder");
+    }
     @Transactional(readOnly = true)
     public List<FolderResponse> getFolders(Long parentId) {
         List<FolderEntity> folders;
@@ -43,6 +55,38 @@ public class FolderService {
             );
         }
         return folders.stream().map(this::toResponse).collect(Collectors.toList());
+    }
+
+    public Resource downloadAsZip(Long folderId) {
+        FolderEntity folder = folderRepo.findById(folderId)
+                .orElseThrow(() -> new RuntimeException("Folder not found"));
+
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        try (ZipOutputStream zos = new ZipOutputStream(baos)) {
+            addFolderToZip(zos, folder, "");
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to create ZIP", e);
+        }
+
+        return new ByteArrayResource(baos.toByteArray());
+    }
+
+    private void addFolderToZip(ZipOutputStream zos, FolderEntity folder, String parentPath) throws IOException {
+        String folderPath = parentPath + folder.getFolderName() + "/";
+        
+        List<FileEntity> files = fileRepo.findAllByParentFolderIdAndIsDeletedFalse(folder.getId());
+        for (FileEntity file : files) {
+            Resource resource = fileService.getFileByKey(file.getStorageObjectKey());
+            ZipEntry entry = new ZipEntry(folderPath + file.getFileName());
+            zos.putNextEntry(entry);
+            zos.write(resource.getInputStream().readAllBytes());
+            zos.closeEntry();
+        }
+        
+        List<FolderEntity> subFolders = folderRepo.findAllByParentFolderIdAndDeletedAtIsNull(folder.getId());
+        for (FolderEntity sub : subFolders) {
+            addFolderToZip(zos, sub, folderPath);
+        }
     }
 
     @Transactional
